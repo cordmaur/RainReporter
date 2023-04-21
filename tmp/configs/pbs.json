@@ -1,0 +1,23 @@
+{
+    "arquivo": "Paraiba_do_sul",
+    "data": "2023-03",
+    "relatorios": [
+        {
+            "nome": "Paraiba do Sul",
+            "tipo": "Mensal",
+            "shp": "/workspaces/bases/bacias de interesse SOE/bacia_negro.shp"
+        },
+        {
+            "nome": "Paraiba do SulParana",
+            "tipo": "Mensal",
+            "data": "2023-02",
+            "shp": "/workspaces/bases/bacias de interesse SOE/bacia_parana.shp"
+        }
+    ],
+    "comments": {
+        "nome": "Paraiba do SulParana",
+        "tipo": "Mensal",
+        "data": "2023-03",
+        "shp": "/workspaces/bases/bacias de interesse SOE/bacia_parana.shp"
+    }
+}
