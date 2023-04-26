@@ -17,5 +17,6 @@ setup(
     #     "contextily",
     #     "ecCodes",
     #     "ecmwflibs",
+    #     "pyjson5",
     # ],
 )

@@ -1,0 +1,12 @@
+/*
+Main configuration file for the reporter package
+*/
+{
+    // Shapefiles used to plot the contexts in the map
+    'shapefiles': {
+        'cities': "../data/cities/cidades.shp",
+        'states': "../data/states/BR_UF_2022.shp",
+        'rivers': "../data/rivers/main_rivers.shp",
+        'dams': "../data/dams/"
+    }
+}

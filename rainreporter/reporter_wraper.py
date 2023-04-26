@@ -1,7 +1,7 @@
 """Module docstring"""
 import io
 from pathlib import Path
-import json
+import pyjson5
 
 from typing import Union
 
@@ -58,6 +58,10 @@ def create_monthly_report(
 def save_report(reporter, report_config, output_folder):
     """Saves one PDF report. Each report may have multiple pages"""
 
+    # check if there is a date in the report
+    if not report_config["data"]:
+        report_config["data"] = DateProcessor.pretty_date(DateProcessor.today())
+
     pdf_doc = PdfMerger()
     for report in report_config["relatorios"]:
         print(f"Processando relatório {report['nome']}")
@@ -96,10 +100,9 @@ def run_reports(
 
     # get the files to be processed
     # all .json file in the config folder will be used
-    files = list(config_folder.glob("*.json"))
+    files = list(config_folder.glob("*.json5"))
 
     for file in files:
         with open(file, "r") as f:
-            report_config = json.load(f)
-
+            report_config = pyjson5.decode_io(f)  # pylint: disable=no-member
             save_report(reporter, report_config, output_folder)
