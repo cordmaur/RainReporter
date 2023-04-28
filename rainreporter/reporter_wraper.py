@@ -1,20 +1,21 @@
 """Module docstring"""
 import io
 from pathlib import Path
+from typing import Union
+
 import pyjson5
 
-from typing import Union
 
 from pypdf import PdfMerger, PdfReader
 
 from raindownloader.inpeparser import INPEParsers
 from raindownloader.utils import DateProcessor
 
-from .reporter import RainReporter
+from .reporter import Reporter
 
 
 def create_monthly_report(
-    reporter: RainReporter, report: dict, output_folder: Union[str, Path]
+    reporter: Reporter, report: dict, output_folder: Union[str, Path]
 ):
     """If output_folder is None, return a BytesIO"""
 
@@ -85,15 +86,17 @@ def run_reports(
     config_folder: Union[str, Path],
     download_folder: Union[str, Path],
     output_folder: Union[str, Path],
+    report_config: Path,
 ):
     """ "Docstring"""
 
     # Initialize a reporter object and folders
-    reporter = RainReporter(
+    reporter = Reporter(
         server=INPEParsers.FTPurl,
         download_folder=download_folder,
         parsers=INPEParsers.parsers,
         post_processors=INPEParsers.post_processors,
+        config_file=report_config,
     )
     config_folder = Path(config_folder)
     output_folder = Path(output_folder)
@@ -103,6 +106,6 @@ def run_reports(
     files = list(config_folder.glob("*.json5"))
 
     for file in files:
-        with open(file, "r") as f:
+        with open(file, "r", encoding="utf-8") as f:
             report_config = pyjson5.decode_io(f)  # pylint: disable=no-member
             save_report(reporter, report_config, output_folder)

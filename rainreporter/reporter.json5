@@ -2,11 +2,70 @@
 Main configuration file for the reporter package
 */
 {
+    // set the month of the begining of the wet period (in integer)
+    'begin_wet_period': 10,
+
+
+    'shape_style':{
+        'edgecolor': 'firebrick',
+        'facecolor': 'none',
+        'linewidth': 1.2,
+        'alpha': 1
+    },
+
     // Shapefiles used to plot the contexts in the map
-    'shapefiles': {
-        'cities': "../data/cities/cidades.shp",
-        'states': "../data/states/BR_UF_2022.shp",
-        'rivers': "../data/rivers/main_rivers.shp",
-        'dams': "../data/dams/"
+    // z_order controls the layer position. Negative z_orders mean the shape will be plotted before the raster
+    // positive z_orders, mean they sould be placed in the front. 
+    'context_shapes': {
+        'cities': {
+            'file': "../data/cities/cidades.shp",
+            'z_order': 2,
+            'type': 'point',                // type of the shape i.e. ['point', 'polygon', 'linestring']
+            'count': 3,                     // maximum number of features to plot
+            'column': 'populacao',          // column to apply the filter
+            'sort_order': 'descending',     // if descending, will get the top X rows in the variable
+            'text_column': 'nome',          // column used to plot the labels
+            'style': {
+                'color': 'black',           // color of the marker
+                'markersize': 6,            // size of the point
+            }
+        },
+        'states': {
+            'file': "../data/states/BR_UF_2022.shp",
+            'z_order': -1,
+            'type': 'polygon',              // type of the shape i.e. ['point', 'polygon', 'linestring']
+            'style': {                      // defines the style of the lines. This property will be passed to the plot function
+                'edgecolor': 'gray',        // line colors
+                'alpha': 0.9,               // sets the transparency of the lines
+                'linewidth': 0.9,           // sets the transparency of the lines
+                'facecolor': 'none'
+            }
+        },
+        'rivers': {
+            'file': "../data/rivers/main_rivers.shp",
+            'z_order': -2,
+            'type': 'linestring',           // type of the shape i.e. ['point', 'polygon']
+            'style': {                      // defines the style of the lines. This property will be passed to the plot function
+                'edgecolor': 'blue',        // line colors
+                'alpha': 0.3,               // sets the transparency of the lines
+                'linewidth': 0.5,           // sets the transparency of the lines
+            },
+            'count': 50,
+            'sort_order': 'descending',
+            'column': 'NUCOMPRIO'
+        },
+        'dams': {
+            'file': "../data/dams/",
+            'z_order': 1,
+            'type': 'point',                // type of the shape i.e. ['point', 'polygon']
+            'style': {
+                'color': 'darkgreen',               // color of the marker
+                'markersize': 5,
+            },
+            'count': 3,                     // maximum number of features to plot
+            'column': 'potencia',           // column to apply the filter
+            'sort_order': 'descending',     // if descending, will get the top X rows in the variable
+            'text_column': 'NOME',          // column used to plot the labels
+        }
     }
 }
