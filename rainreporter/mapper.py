@@ -1,7 +1,6 @@
 """The MapReporter class is the responsible for plotting all the maps in the reports"""
-
 from typing import Dict, Optional, Tuple, Union
-
+from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
@@ -17,15 +16,22 @@ from raindownloader.utils import GISUtil
 from raindownloader.inpeparser import INPE
 
 
-class MapReporter:
+class Mapper:
     """This class is responsible for plotting the maps"""
 
-    def __init__(self, shapes: Dict):
+    def __init__(self, config: Dict, shapes: Dict):
         # Load the shapes in memory and store them as a dictionary
         for shape in shapes:
-            shapes[shape]["gdf"] = gpd.read_file(shapes[shape]["file"])
+            file = Path(shapes[shape]["file"])
+
+            if not file.exists() and not file.is_absolute():
+                file = (Path(__file__).parent) / file
+
+            print(file)
+            shapes[shape]["gdf"] = gpd.read_file(file)
 
         self.shapes = shapes
+        self.config = config
 
     @staticmethod
     def bounds(
@@ -65,7 +71,7 @@ class MapReporter:
         """
 
         # first, let's get the bounding box
-        xmin, ymin, xmax, ymax = MapReporter.bounds(
+        xmin, ymin, xmax, ymax = Mapper.bounds(
             shp, percent_buffer=percent_buffer, fixed_buffer=fixed_buffer
         )
 
@@ -147,7 +153,7 @@ class MapReporter:
         rows_in_view = shp[~rows_in_view.is_empty]
 
         # get the filter query
-        rows_in_view = MapReporter.filter_shape(rows_in_view, shape)
+        rows_in_view = Mapper.filter_shape(rows_in_view, shape)
 
         # get the style from the shape
         style = shape["style"] if "style" in shape else {}
@@ -299,7 +305,7 @@ class MapReporter:
                 memdset.write(subraster)
 
             # now, let's create a colorbar for this
-            cbar = MapReporter.create_colorbar(
+            cbar = Mapper.create_colorbar(
                 raster=subraster,
                 plt_ax=plt_ax,
                 label=colorbar_label,

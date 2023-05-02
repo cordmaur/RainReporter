@@ -2,10 +2,6 @@
 Main configuration file for the reporter package
 */
 {
-    // set the month of the begining of the wet period (in integer)
-    'begin_wet_period': 10,
-
-
     'shape_style':{
         'edgecolor': 'firebrick',
         'facecolor': 'none',
