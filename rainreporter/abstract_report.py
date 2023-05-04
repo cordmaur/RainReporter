@@ -1,5 +1,9 @@
+"""
+Defines the AbstractReport class
+"""
+from pathlib import Path
 import abc
-from typing import List, Dict
+from typing import List, Dict, Optional, Union
 from raindownloader.downloader import Downloader
 from raindownloader.parser import BaseParser
 
@@ -21,5 +25,11 @@ class AbstractReport(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def from_dict(cls, downloader: Downloader, mapper: Mapper, config: Dict):
+    def from_dict(
+        cls,
+        downloader: Downloader,
+        mapper: Mapper,
+        config: Dict,
+        bases_folder: Optional[Union[str, Path]] = None,
+    ):
         """Create the report class based on a json specification"""

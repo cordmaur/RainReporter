@@ -35,6 +35,7 @@ class Reporter:
         download_folder: Union[Path, str],
         avoid_update: bool = True,
         config_file: Optional[Union[str, Path]] = None,
+        bases_folder: Optional[Union[Path, str]] = None,
     ):
         # get the parsers necessary for the reports
         parsers = set()
@@ -59,6 +60,7 @@ class Reporter:
         )
 
         self.download_folder = Path(download_folder)
+        self.bases_folder = bases_folder
 
     @staticmethod
     def calc_geodesic_area(geom: Geometry) -> float:
@@ -101,7 +103,10 @@ class Reporter:
 
             # create the report instance using the configuration
             report = template.from_dict(
-                downloader=self.downloader, mapper=self.mapper, config=report_config
+                downloader=self.downloader,
+                mapper=self.mapper,
+                config=report_config,
+                bases_folder=self.bases_folder,
             )
 
             result = report.generate_report(date_str=date_str)  # type: ignore

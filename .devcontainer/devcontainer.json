@@ -8,6 +8,7 @@
 	},
 	"mounts": [
 		"source=/Users/cordmaur/Library/CloudStorage/OneDrive-AgênciaNacionaldeÁguas/Trabalho/SOE/COVEC/Bases,target=/workspaces/bases,type=bind",
+		"source=/Users/cordmaur/Onedrive/Trabalho/SOE/COVEC/RelatoriosChuva/reports_folder,target=/workspaces/reports_folder,type=bind",
 		"source=/Users/cordmaur/Projects/INPERainDownloader,target=/workspaces/INPERainDownloader,type=bind"
 	],
 	"runArgs": [

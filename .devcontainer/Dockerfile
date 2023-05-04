@@ -1,4 +1,4 @@
-FROM cordmaur/raindownloader:v1
+FROM cordmaur/raindownloader:v2
 
 # Use an official GDAL image as the base image
 # FROM osgeo/gdal:ubuntu-small-latest

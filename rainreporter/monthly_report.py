@@ -56,7 +56,7 @@ class MonthlyReport(AbstractReport):
         self,
         downloader: Downloader,
         mapper: Mapper,
-        shp_file: str,
+        shp_file: Union[str, Path],
         name: str = "",
         month_lbk: Optional[int] = 23,
         wet_month: int = 10,
@@ -71,24 +71,42 @@ class MonthlyReport(AbstractReport):
 
     @classmethod
     def from_json_file(
-        cls, downloader: Downloader, mapper: Mapper, json_file: Union[str, Path]
+        cls,
+        downloader: Downloader,
+        mapper: Mapper,
+        json_file: Union[str, Path],
+        bases_folder: Optional[Union[str, Path]] = None,
     ):
         """Create a MonthlyReport instance based on the json file"""
         config = open_config_file(json_file)
 
-        return cls.from_dict(downloader=downloader, mapper=mapper, config=config)
+        return cls.from_dict(
+            downloader=downloader,
+            mapper=mapper,
+            config=config,
+            bases_folder=bases_folder,
+        )
 
     @classmethod
     def from_dict(
-        cls, downloader: Downloader, mapper: Mapper, config: Dict
+        cls,
+        downloader: Downloader,
+        mapper: Mapper,
+        config: Dict,
+        bases_folder: Optional[Union[str, Path]] = None,
     ) -> AbstractReport:
         """Create a MonthlyReport instance based on a configuration dict"""
+
+        shp_file = Path(config["shp"])
+
+        if bases_folder is not None and not shp_file.is_absolute():
+            shp_file = Path(bases_folder) / shp_file
 
         return cls(
             downloader=downloader,
             mapper=mapper,
             name=config["nome"],
-            shp_file=config["shp"],
+            shp_file=shp_file,
             month_lbk=config.get("total_meses"),
             wet_month=config["inicio_periodo_chuvoso"],
         )
