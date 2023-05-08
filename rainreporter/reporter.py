@@ -85,12 +85,14 @@ class Reporter:
         return report.generate_report(date_str=date_str)
 
     def generate_pdf(
-        self, json_file: Union[Path, str], output_folder: Union[Path, str]
+        self, json_file: Union[Path, str, Dict], output_folder: Union[Path, str]
     ):
         """Generate a PDF report based on a json file specification"""
 
         # open the json file with the pdf specification
-        pdf_config = open_config_file(json_file)
+        pdf_config = (
+            json_file if isinstance(json_file, Dict) else open_config_file(json_file)
+        )
 
         # get the date and use TODAY if it is absent
         date = pdf_config.get("data")
@@ -143,10 +145,6 @@ class Reporter:
         # convert the input folder to Path
         input_folder = Path(input_folder)
 
-        # if it is a hot folder, create the processed subdirectory
-        if hot:
-            (input_folder / "hot_processed").mkdir(exist_ok=True)
-
         # get the files to be processed
         # all .json file in the config folder will be used
         files = list(input_folder.glob("*.json5"))
@@ -154,14 +152,22 @@ class Reporter:
         if len(files) == 0:
             print(f"No files found to process in {str(input_folder)}")
 
-        for file in files:
-            self.generate_pdf(json_file=file, output_folder=output_folder)
+        # if it is a hot folder, create the processed subdirectory
+        # load the files in memory and move them to the processed folder
+        if hot:
+            (input_folder / "hot_processed").mkdir(exist_ok=True)
 
-            if hot:
+            parsed_files = []
+            for file in files:
+                parsed_files.append(open_config_file(file))
                 new_name = file.name + "-" + datetime.now().strftime("%y%m%d-%H%M%S")
                 target = file.parent / "hot_processed" / new_name
-
                 file.rename(target)
+
+            files = parsed_files
+
+        for file in files:
+            self.generate_pdf(json_file=file, output_folder=output_folder)
 
     @staticmethod
     def animate_cube(
