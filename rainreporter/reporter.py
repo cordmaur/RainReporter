@@ -3,7 +3,8 @@ Main module for the reporter class
 """
 import io
 from pathlib import Path
-from typing import Union, Optional, List, Dict, Type
+from datetime import datetime
+from typing import Union, Optional, Dict, Type
 from PIL import Image
 import matplotlib.pyplot as plt
 
@@ -127,18 +128,40 @@ class Reporter:
         pdf_doc.write(Path(output_folder) / filename)
 
     def process_folder(
-        self, hot_folder: Union[str, Path], output_folder: Union[str, Path]
+        self,
+        input_folder: Union[str, Path],
+        output_folder: Union[str, Path],
+        hot: bool = False,
     ):
         """
         Process an entire folder and save the outputs to the output folder.
-        The hot_folder must contain .json5 files with the PDF definitions.
+        The input_folder must contain .json5 files with the PDF definitions.
+        The hot flag indicate if the input_folder should be treated as a hot_folder.
+        In hot mode, the .json5 files will be moved to the processed folder just after processing.
         """
+
+        # convert the input folder to Path
+        input_folder = Path(input_folder)
+
+        # if it is a hot folder, create the processed subdirectory
+        if hot:
+            (input_folder / "hot_processed").mkdir(exist_ok=True)
+
         # get the files to be processed
         # all .json file in the config folder will be used
-        files = list(Path(hot_folder).glob("*.json5"))
+        files = list(input_folder.glob("*.json5"))
+
+        if len(files) == 0:
+            print(f"No files found to process in {str(input_folder)}")
 
         for file in files:
             self.generate_pdf(json_file=file, output_folder=output_folder)
+
+            if hot:
+                new_name = file.name + "-" + datetime.now().strftime("%y%m%d-%H%M%S")
+                target = file.parent / "hot_processed" / new_name
+
+                file.rename(target)
 
     @staticmethod
     def animate_cube(

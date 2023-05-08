@@ -14,6 +14,7 @@ def main(
     bases_folder: Path,
     downloads_folder: Path,
     output_folder: Path,
+    hot_mode: bool,
 ):
     """Run the reporter on a specific folder"""
     # create a reporter instance
@@ -29,8 +30,7 @@ def main(
 
         # once the reporter is created, we will call it to process the hotfolder
         reporter.process_folder(
-            hot_folder=configs_folder,
-            output_folder=output_folder,
+            input_folder=configs_folder, output_folder=output_folder, hot=hot_mode
         )
         # Log a message to a file to confirm that the script was executed
         with open("/file.log", "a", encoding="utf-8") as f:
@@ -87,34 +87,45 @@ if __name__ == "__main__":
         "--output", help="Output folder", required=False, default="output"
     )
 
+    parser.add_argument(
+        "--hot",
+        action="store_true",
+        help="If processing in 'hot' mode, the input configs will "
+        "be deleted at the end of the processing and the log will be saved to 'processed' folder.",
+    )
+
     print(datetime.datetime.now())
     args = parser.parse_args()
 
     # if master_folder is provided, consider all folders as relative to it
     if args.master_folder is not None:
         args.master_folder = Path(args.master_folder)
-        for arg in vars(args):
-            if arg == "master_folder":
-                continue
-
+        for arg in ["bases", "configs", "downloads", "output"]:
             value = Path(getattr(args, arg))
 
             # if the value is not absolute
             if not value.is_absolute():
                 setattr(args, arg, args.master_folder / value)
 
+    # print(args)
+
     # make sure everything is set as Path
-    for arg, value in vars(args).items():
+    for arg in ["bases", "configs", "downloads", "output"]:
+        value = getattr(args, arg)
         if value is not None:
             setattr(args, arg, Path(value))
 
             print(f"{arg}: {value} -> {'ok' if Path(value).exists() else 'FAILED'}")
 
-    # print(args)
+    config_files = list(args.configs.glob("*.json5"))
 
-    main(
-        configs_folder=args.configs,
-        output_folder=args.output,
-        downloads_folder=args.downloads,
-        bases_folder=args.bases,
-    )
+    # just call the main function if there are files to be processed
+    # that's is done here to avoid overhead in hot folder processing
+    if len(config_files) > 0:
+        main(
+            configs_folder=args.configs,
+            output_folder=args.output,
+            downloads_folder=args.downloads,
+            bases_folder=args.bases,
+            hot_mode=args.hot,
+        )
