@@ -30,7 +30,7 @@ def open_config_file(config_file: Optional[Union[str, Path, io.StringIO]] = None
 
     # if the config file is a file-like (StringIO) obj, parse it automatically
     if config_file is not None and isinstance(config_file, io.StringIO):
-        report_config = pyjson5.decode_io(config_file)
+        report_config = pyjson5.decode_io(config_file)  # pylint: disable=no-member
 
     else:
         # transform the config file to Path

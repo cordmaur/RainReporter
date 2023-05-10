@@ -1,0 +1,72 @@
+/*
+Este á o arquivo de configuração de relatório. 
+Cada arquivo .PDF é considerado um relatório que pode conter diversos sub-relatórios
+Essa forma de organização permite que reservatórios "conectados" possam ser apresentados 
+de forma conjunta em um único arquivo. 
+
+Abaixo a descrição do relatório comentado:
+*/
+{
+    // O arquivo será acrescido com a data do relatório
+    // OBS: Se o campo data não existir ou for setado para false, o relatório
+    // será gerado com a data atual. 
+    "arquivo": "SãoFrancisco_completo",
+
+    // O campo data força a data do relatório. Deve usado para gerar relatórios antigos
+    // A data pode ser expressa em qualquer formato que o Python consiga "entender"
+    // ex. '2023-03', '20230201', '2023/03/01', '2002-01-01'
+    // "data": '2023-03',
+    "data": "2023-05-07",
+
+    // O campo relatórios contém os sub-relatórios que serão gerados dentro do arquivo PDF
+    "relatorios": [
+        {
+            "nome": "São Francisco",
+            // tipo de relatório. Pode ser Mensal ou Diário
+            "tipo": "Mensal",
+            "shp": "bacias_interesse/bacia_Sao_Francisco.shp",
+
+            // marca o mês do início do período chuvoso (em inteiros)
+            'inicio_periodo_chuvoso': 10,
+
+            // opcional: indica o número de meses passados para fazer o gráfico
+            'total_meses': 23
+        },
+        {
+            "nome": "Incremental Sobradinho",
+            // tipo de relatório. Pode ser Mensal ou Diário
+            "tipo": "Mensal",
+            "shp": "BaciasIncrementais/ParaibaSul/Paraibuna_new1_diss_proj.shp",
+
+            // marca o mês do início do período chuvoso (em inteiros)
+            'inicio_periodo_chuvoso': 10,
+        },
+        {
+            "nome": "Incremental 3 Marias",
+            // tipo de relatório. Pode ser Mensal ou Diário
+            "tipo": "Mensal",
+            "shp": "BaciasIncrementais/ParaibaSul/Jaguari_proj2_diss_proj.shp",
+
+            // marca o mês do início do período chuvoso (em inteiros)
+            'inicio_periodo_chuvoso': 10,
+        },
+        {
+            "nome": "Incremental Xingó",
+            // tipo de relatório. Pode ser Mensal ou Diário
+            "tipo": "Mensal",
+            "shp": "BaciasIncrementais/ParaibaSul/Santa_Branca_proj2_diss_proj.shp",
+
+            // marca o mês do início do período chuvoso (em inteiros)
+            'inicio_periodo_chuvoso': 10,
+        },
+        {
+            "nome": "Incremental Itaparica",
+            // tipo de relatório. Pode ser Mensal ou Diário
+            "tipo": "Mensal",
+            "shp": "BaciasIncrementais/ParaibaSul/Funil_new4_diss_proj.shp",
+
+            // marca o mês do início do período chuvoso (em inteiros)
+            'inicio_periodo_chuvoso': 10,
+        },
+    ],
+}
