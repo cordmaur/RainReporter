@@ -226,7 +226,10 @@ class Reporter:
             files = parsed_files
 
         for file in files:
-            self.generate_pdf(json_file=file, output_folder=output_folder)
+            try:
+                self.generate_pdf(json_file=file, output_folder=output_folder)
+            except Exception as error:
+                self.logger.error(error)
 
     @staticmethod
     def animate_cube(
