@@ -23,7 +23,8 @@ Main configuration file for the reporter package
             'text_column': 'nome',          // column used to plot the labels
             'style': {
                 'color': 'black',           // color of the marker
-                'markersize': 6,            // size of the point
+                'markersize': 10,            // size of the point
+                'label': 'Cidades'
             }
         },
         'states': {
@@ -56,7 +57,9 @@ Main configuration file for the reporter package
             'type': 'point',                // type of the shape i.e. ['point', 'polygon']
             'style': {
                 'color': 'darkgreen',               // color of the marker
-                'markersize': 5,
+                'markersize': 20,
+                'marker': '^',
+                'label': 'Reservatórios'
             },
             'count': 3,                     // maximum number of features to plot
             'column': 'potencia',           // column to apply the filter

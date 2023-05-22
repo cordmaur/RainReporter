@@ -2,9 +2,11 @@
 Main module for the reporter class
 """
 import io
+import logging
 from pathlib import Path
 from datetime import datetime
-from typing import Union, Optional, Dict, Type
+from typing import Union, Optional, Dict, Type, Any
+
 from PIL import Image
 import matplotlib.pyplot as plt
 
@@ -18,8 +20,10 @@ from raindownloader.downloader import Downloader
 from raindownloader.utils import DateProcessor
 from raindownloader.inpeparser import INPEParsers
 
+from .utils import open_json_file
+
 from .abstract_report import AbstractReport
-from .monthly_report import MonthlyReport, open_config_file
+from .monthly_report import MonthlyReport
 from .mapper import Mapper
 
 
@@ -37,7 +41,17 @@ class Reporter:
         avoid_update: bool = True,
         config_file: Optional[Union[str, Path]] = None,
         bases_folder: Optional[Union[Path, str]] = None,
+        log_level: int = logging.DEBUG,
     ):
+        """
+        :param server: FTP server to connect the downloader to.
+        :param download_folder: Folder to store downloaded images.
+        :param avoid_update: Avoid updates when file already downlaoded, defaults to True
+        :param config_file: Path to the config file. If not passed,
+        it will try to load `reporter.json5` from the current folder.
+        :param bases_folder: Folder to store the geographic bases.
+        :param log_level: Logging level, defaults to logging.DEBUG
+        """
         # get the parsers necessary for the reports
         parsers = set()
         for template in Reporter.templates.values():
@@ -50,18 +64,45 @@ class Reporter:
             local_folder=download_folder,
             avoid_update=avoid_update,
             post_processors=INPEParsers.post_processors,
+            log_level=log_level,
         )
 
+        # create the logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
+        self.logger.handlers.clear()
+        self.logger.addHandler(self.downloader.logger.handlers[0])
+
         # load the config file
-        self.config = open_config_file(config_file)
+        self.logger.info("Configuring Reporter class")
+        self.config = Reporter.open_config_file(config_file)
+
+        self.logger.info(self.config)
 
         # create an instance of MapReporter and pass to it the shapes used as backgound
+        self.logger.info("Creating a MapReporter instance")
         self.mapper = Mapper(
             config=self.config["shape_style"], shapes=self.config["context_shapes"]
         )
 
         self.download_folder = Path(download_folder)
         self.bases_folder = bases_folder
+
+    @staticmethod
+    def open_config_file(config_file: Optional[Union[str, Path]]) -> Dict[str, Any]:
+        """
+        Open the configuration file. If not provided, it will try to locate
+        `reporter.json5` in the current folder.
+        :param config_file: Path to the configuration file
+        :return: Config file as a Dict.
+        """
+
+        # transform the config file to Path
+        config_file = (
+            Path(config_file) if config_file is not None else Path("./reporter.json5")
+        )
+
+        return open_json_file(config_file)
 
     @staticmethod
     def calc_geodesic_area(geom: Geometry) -> float:
@@ -80,6 +121,9 @@ class Reporter:
         else:
             template = rep_type
 
+        self.logger.info("Generating report for date %s", date_str)
+        self.logger.info("Using report template %s", template)
+        self.logger.info("Configurations: %s", kwargs)
         report = template(downloader=self.downloader, mapper=self.mapper, **kwargs)
 
         return report.generate_report(date_str=date_str)
@@ -91,42 +135,48 @@ class Reporter:
 
         # open the json file with the pdf specification
         pdf_config = (
-            json_file if isinstance(json_file, Dict) else open_config_file(json_file)
+            json_file if isinstance(json_file, Dict) else open_json_file(json_file)
         )
 
         # get the date and use TODAY if it is absent
         date = pdf_config.get("data")
         date = DateProcessor.today() if not date else date
         date_str = DateProcessor.pretty_date(date, "%Y-%m-%d")
+        filename = f"{pdf_config['arquivo']}_{date_str}.pdf"
+
+        self.logger.info("Preparing to generate file %s", filename)
 
         pdf_doc = PdfMerger()
         for report_config in pdf_config["relatorios"]:
-            # get the appropriate template
-            template = Reporter.templates[report_config["tipo"]]
+            try:
+                # get the appropriate template
+                template = Reporter.templates[report_config["tipo"]]
 
-            # create the report instance using the configuration
-            report = template.from_dict(
-                downloader=self.downloader,
-                mapper=self.mapper,
-                config=report_config,
-                bases_folder=self.bases_folder,
-            )
+                # create the report instance using the configuration
+                report = template.from_dict(
+                    downloader=self.downloader,
+                    mapper=self.mapper,
+                    config=report_config,
+                    bases_folder=self.bases_folder,
+                )
 
-            result = report.generate_report(date_str=date_str)  # type: ignore
+                result = report.generate_report(date_str=date_str)  # type: ignore
 
-            # get axes and figure
-            plt_axs = result[0]
-            fig = plt_axs[0].figure
+                # get axes and figure
+                plt_axs = result[0]
+                fig = plt_axs[0].figure
 
-            # save the PDF to a memory file
-            file = io.BytesIO()
-            fig.savefig(file, bbox_inches="tight", pad_inches=0.6, format="pdf")
+                # save the PDF to a memory file
+                file = io.BytesIO()
+                fig.savefig(file, bbox_inches="tight", pad_inches=0.6, format="pdf")
 
-            # append the page to the file
-            pdf_doc.append(PdfReader(file))
+                # append the page to the file
+                pdf_doc.append(PdfReader(file))
+
+            except Exception as error:  # pylint: disable=W0703
+                self.logger.error(error)
 
         # save the pdf report to disk
-        filename = f"{pdf_config['arquivo']}_{date_str}.pdf"
         pdf_doc.write(Path(output_folder) / filename)
 
     def process_folder(
@@ -142,6 +192,8 @@ class Reporter:
         In hot mode, the .json5 files will be moved to the processed folder just after processing.
         """
 
+        self.logger.info("Starting to process folder %s", input_folder)
+
         # convert the input folder to Path
         input_folder = Path(input_folder)
 
@@ -151,6 +203,11 @@ class Reporter:
 
         if len(files) == 0:
             print(f"No files found to process in {str(input_folder)}")
+        else:
+            self.logger.info("Output folder: %s", output_folder)
+            self.logger.info("Execution mode: %s", "HOT" if hot else "NORMAL")
+            self.logger.info("%s files found for processing", len(files))
+            self.logger.info(files)
 
         # if it is a hot folder, create the processed subdirectory
         # load the files in memory and move them to the processed folder
@@ -159,10 +216,12 @@ class Reporter:
 
             parsed_files = []
             for file in files:
-                parsed_files.append(open_config_file(file))
-                new_name = file.name + "-" + datetime.now().strftime("%y%m%d-%H%M%S")
+                parsed_files.append(open_json_file(file))
+                new_name = file.name + "-" + datetime.now().strftime("%Y%m%d-%H%M%S")
                 target = file.parent / "hot_processed" / new_name
                 file.rename(target)
+
+                self.logger.debug("Renaming file %s to %s", file.name, target.name)
 
             files = parsed_files
 

@@ -158,7 +158,7 @@ class Mapper:
         # get the style from the shape
         style = shape["style"] if "style" in shape else {}
 
-        rows_in_view.plot(ax=plt_ax, **style)
+        rows_in_view.plot(ax=plt_ax, **style, legend=True)
 
         # annotate point names
         if "text_column" in shape:
@@ -271,7 +271,7 @@ class Mapper:
         style_kwds = {} if style_kwds is None else style_kwds
 
         # plot the shape using our function that keeps the aspect of the axes
-        shp.plot(ax=plt_ax, **style_kwds)
+        shp.plot(ax=plt_ax, **style_kwds, legend=True)
 
         # to use contextily, we will write the raster to a MemoryFile
         # so we don't need to write it to disk and reload it

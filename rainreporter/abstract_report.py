@@ -3,7 +3,7 @@ Defines the AbstractReport class
 """
 from pathlib import Path
 import abc
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 from raindownloader.downloader import Downloader
 from raindownloader.parser import BaseParser
 
@@ -20,7 +20,7 @@ class AbstractReport(abc.ABC):
         self.mapper = mapper
 
     @abc.abstractmethod
-    def generate_report(self, *args, **kwargs):
+    def generate_report(self, *args, **kwargs) -> Tuple:
         """Abstract method that needs to be implemented"""
 
     @classmethod

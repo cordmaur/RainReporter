@@ -1,12 +1,10 @@
 """
 This module implements the monthly report class. 
 """
-import io
 from pathlib import Path
 from typing import Union, Optional, Dict
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-import pyjson5
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -18,37 +16,10 @@ import xarray as xr
 from raindownloader.downloader import Downloader
 from raindownloader.utils import DateProcessor
 from raindownloader.inpeparser import INPEParsers, INPETypes
+
+from rainreporter.utils import open_json_file
 from .mapper import Mapper
 from .reporter import AbstractReport
-
-
-def open_config_file(config_file: Optional[Union[str, Path, io.StringIO]] = None):
-    """
-    Try to locate the configuration file and return it as a dictionary
-    If a file is not passed, try to locate in current directory
-    """
-
-    # if the config file is a file-like (StringIO) obj, parse it automatically
-    if config_file is not None and isinstance(config_file, io.StringIO):
-        report_config = pyjson5.decode_io(config_file)  # pylint: disable=no-member
-
-    else:
-        # transform the config file to Path
-        config_file = (
-            Path(config_file) if config_file is not None else Path("./reporter.json5")
-        )
-
-        # check if it exists
-        if not config_file.exists():
-            raise FileNotFoundError(
-                f"Config file not found {str(config_file.absolute())}"
-            )
-
-        # open the config file
-        with open(config_file, "r", encoding="utf-8") as file:
-            report_config = pyjson5.decode_io(file)  # pylint: disable=no-member
-
-    return report_config
 
 
 class MonthlyReport(AbstractReport):
@@ -86,7 +57,7 @@ class MonthlyReport(AbstractReport):
         bases_folder: Optional[Union[str, Path]] = None,
     ):
         """Create a MonthlyReport instance based on the json file"""
-        config = open_config_file(json_file)
+        config = open_json_file(json_file)
 
         return cls.from_dict(
             downloader=downloader,
@@ -122,7 +93,8 @@ class MonthlyReport(AbstractReport):
     @staticmethod
     def create_report_layout() -> tuple:
         """Create the layout and return figure and axes as a list"""
-        fig = plt.figure(constrained_layout=True, figsize=(10, 10))
+        fig = plt.figure(num=1, constrained_layout=True, figsize=(10, 10))
+        fig.clear()
 
         gridspec = fig.add_gridspec(
             2, 3, width_ratios=[0.3, 0.3, 0.3], height_ratios=[1.2, 1]
@@ -192,6 +164,8 @@ class MonthlyReport(AbstractReport):
         )
 
         self.mapper.plot_context_layers(plt_ax=plt_ax, z_min=0, crs=rain.rio.crs)
+
+        plt_ax.legend(loc="lower right")
 
         # write the title of the map
         month_str = DateProcessor.pretty_date(date, "%m-%Y")
@@ -299,12 +273,13 @@ class MonthlyReport(AbstractReport):
         fig.suptitle(title, y=1.1, fontsize=14)
 
         subtitle = f"Relatório gerado em: {DateProcessor.pretty_date(today)}\n"
+        subtitle += "MLT (INPE) calculada de 2000-2022 (23 anos)\n"
 
         # check if we are in the current month
         if today.month == date.month:
             subtitle += "* Chuva acumulada no mês atual até último dia disponível."
 
-        fig.text(0.01, 1.06, subtitle, ha="left", va="top", fontsize=12)
+        fig.text(0.01, 1.06, subtitle, ha="left", va="top", fontsize=10)
 
         ### Open the cubes
         # get the period to be considered
@@ -322,17 +297,23 @@ class MonthlyReport(AbstractReport):
         # after loading the cubes, if we are plotting the current month
         #  we need to include an observation stating the last day considered
         # for the accumulation. THe last considered date will be called last_date
-        if date.month == today.month:
+        if (date.year == today.year) and (date.month == today.month):
             # we will check the grib files downloaded in the daily rain
-            last_date = today + relativedelta(day=1)
+            # last_date = today + relativedelta(day=1)
 
-            while self.downloader.local_file_exists(
-                date=last_date, datatype=INPETypes.DAILY_RAIN
-            ):
-                last_date += relativedelta(days=1)
+            # while self.downloader.local_file_exists(
+            #     date=last_date, datatype=INPETypes.DAILY_RAIN
+            # ):
+            #     last_date += relativedelta(days=1)
 
-            last_date += relativedelta(days=-1)
+            # last_date += relativedelta(days=-1)
+
+            file = self.downloader.get_file(date, INPETypes.MONTHLY_ACCUM_MANUAL)
+            dset = xr.open_dataset(file)
+            last_date = DateProcessor.parse_date(dset.attrs["last_day"])
             counter_date_str = DateProcessor.pretty_date(last_date)
+            dset.close()
+
             rep_axs[0].text(
                 0.01,
                 0.05,
@@ -376,6 +357,7 @@ class MonthlyReport(AbstractReport):
         rep_axs[-1].bar(dframe.index, dframe["monthacum"])
         rep_axs[-1].plot(dframe.index, dframe["lta"], color="orange", marker="x")
         rep_axs[-1].tick_params(axis="x", labelrotation=90)
+        rep_axs[-1].set_ylabel("Precipitação mensal (mm)")
 
         ### Write the tabular information
         self.write_tabular_monthly(

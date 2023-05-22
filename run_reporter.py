@@ -117,10 +117,9 @@ if __name__ == "__main__":
 
             print(f"{arg}: {value} -> {'ok' if Path(value).exists() else 'FAILED'}")
 
-    config_files = list(args.configs.glob("*.json5"))
-
     # just call the main function if there are files to be processed
     # that's is done here to avoid overhead in hot folder processing
+    config_files = list(args.configs.glob("*.json5"))
     if len(config_files) > 0:
         main(
             configs_folder=args.configs,
