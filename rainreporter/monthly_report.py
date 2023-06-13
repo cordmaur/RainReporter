@@ -193,7 +193,7 @@ class MonthlyReport(AbstractReport):
         ### write the accumulated rain since the wet period starts
         # get the months where the wet period begins
         # and extract the last period
-        last_wet_period = rain_df[rain_df.index.month == self.wet_month].index[0]
+        last_wet_period = rain_df[rain_df.index.month == self.wet_month].index[0]  # type: ignore
 
         # explicitly cast last_wet_period as datetime to avoid PYLINT warnings
         last_wet_period = pd.to_datetime(last_wet_period)  # type: ignore
@@ -204,8 +204,8 @@ class MonthlyReport(AbstractReport):
 
         ### Prepare the text
         if last_date is None:
-            last_date = rain_df.index[0]
-            last_date_str = DateProcessor.pretty_date(last_date, "%m-%Y")
+            last_date = rain_df.index[0]  # type: ignore
+            last_date_str = DateProcessor.pretty_date(last_date, "%m-%Y")  # type: ignore
         else:
             last_date_str = DateProcessor.pretty_date(last_date, "%d-%m-%Y")
 
@@ -216,7 +216,7 @@ class MonthlyReport(AbstractReport):
         accum_text = f"Prec. acum de {last_wet_period_str}"
         accum_text += f" até {last_date_str}: {accum_rain} mm"
         mlt_text = f"MLT de {last_wet_period_str} até "
-        mlt_text += f"{DateProcessor.month_abrev(last_date)}: {accum_mlt} mm"
+        mlt_text += f"{DateProcessor.month_abrev(last_date)}: {accum_mlt} mm"  # type: ignore
 
         plt_ax.text(0, 1, accum_text)
         plt_ax.text(0, 0.96, mlt_text)
@@ -298,16 +298,6 @@ class MonthlyReport(AbstractReport):
         #  we need to include an observation stating the last day considered
         # for the accumulation. THe last considered date will be called last_date
         if (date.year == today.year) and (date.month == today.month):
-            # we will check the grib files downloaded in the daily rain
-            # last_date = today + relativedelta(day=1)
-
-            # while self.downloader.local_file_exists(
-            #     date=last_date, datatype=INPETypes.DAILY_RAIN
-            # ):
-            #     last_date += relativedelta(days=1)
-
-            # last_date += relativedelta(days=-1)
-
             file = self.downloader.get_file(date, INPETypes.MONTHLY_ACCUM_MANUAL)
             dset = xr.open_dataset(file)
             last_date = DateProcessor.parse_date(dset.attrs["last_day"])

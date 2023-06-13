@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 """Script to run the Reporter to process an entire folder"""
 import argparse

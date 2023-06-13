@@ -18,12 +18,12 @@ from pypdf import PdfMerger, PdfReader
 
 from raindownloader.downloader import Downloader
 from raindownloader.utils import DateProcessor
-from raindownloader.inpeparser import INPEParsers
 
 from .utils import open_json_file
 
 from .abstract_report import AbstractReport
 from .monthly_report import MonthlyReport
+from .daily_report import DailyReport
 from .mapper import Mapper
 
 
@@ -32,6 +32,7 @@ class Reporter:
 
     templates: Dict[str, type[AbstractReport]] = {
         "Mensal": MonthlyReport,
+        "Diario": DailyReport,
     }
 
     def __init__(
@@ -63,7 +64,6 @@ class Reporter:
             parsers=parsers,  # type: ignore
             local_folder=download_folder,
             avoid_update=avoid_update,
-            post_processors=INPEParsers.post_processors,
             log_level=log_level,
         )
 
@@ -124,9 +124,14 @@ class Reporter:
         self.logger.info("Generating report for date %s", date_str)
         self.logger.info("Using report template %s", template)
         self.logger.info("Configurations: %s", kwargs)
-        report = template(downloader=self.downloader, mapper=self.mapper, **kwargs)
+        report = template.from_dict(
+            downloader=self.downloader,
+            mapper=self.mapper,
+            config=kwargs,
+            bases_folder=self.bases_folder,
+        )
 
-        return report.generate_report(date_str=date_str)
+        return report.generate_report(date_str=date_str)  # type: ignore
 
     def generate_pdf(
         self, json_file: Union[Path, str, Dict], output_folder: Union[Path, str]
@@ -149,18 +154,9 @@ class Reporter:
         pdf_doc = PdfMerger()
         for report_config in pdf_config["relatorios"]:
             try:
-                # get the appropriate template
-                template = Reporter.templates[report_config["tipo"]]
-
-                # create the report instance using the configuration
-                report = template.from_dict(
-                    downloader=self.downloader,
-                    mapper=self.mapper,
-                    config=report_config,
-                    bases_folder=self.bases_folder,
+                result = self.generate_report(
+                    rep_type=report_config["tipo"], date_str=date_str, **report_config
                 )
-
-                result = report.generate_report(date_str=date_str)  # type: ignore
 
                 # get axes and figure
                 plt_axs = result[0]
