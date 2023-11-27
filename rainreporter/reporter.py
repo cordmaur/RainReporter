@@ -16,8 +16,8 @@ import xarray as xr
 
 from pypdf import PdfMerger, PdfReader
 
-from raindownloader.downloader import Downloader
-from raindownloader.utils import DateProcessor
+from mergedownloader.downloader import Downloader
+from mergedownloader.utils import DateProcessor
 
 from .utils import open_json_file
 
@@ -158,9 +158,9 @@ class Reporter:
                     rep_type=report_config["tipo"], date_str=date_str, **report_config
                 )
 
-                # get axes and figure
-                plt_axs = result[0]
-                fig = plt_axs[0].figure
+                # get the figure
+                # plt_axs = result[0]
+                fig = result[0] #.figure
 
                 # save the PDF to a memory file
                 file = io.BytesIO()

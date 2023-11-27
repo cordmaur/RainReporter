@@ -12,8 +12,8 @@ import rasterio as rio
 import xarray as xr
 import contextily as cx
 
-from raindownloader.utils import GISUtil
-from raindownloader.inpeparser import INPE
+from mergedownloader.utils import GISUtil
+from mergedownloader.inpeparser import INPE
 
 
 class Mapper:

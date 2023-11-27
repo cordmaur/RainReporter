@@ -2,21 +2,26 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/anaconda
 {
 	"name": "Geospatial (Python 3)",
-	"build": {
-		"context": "..",
-		"dockerfile": "Dockerfile"
-	},
+	// "build": {
+	// 	"context": "..",
+	// 	"dockerfile": "Dockerfile"
+	// },
+	"image": "cordmaur/merge-downloader:v1",
 	"mounts": [
-		"source=/Users/cordmaur/Library/CloudStorage/OneDrive-AgênciaNacionaldeÁguas/Trabalho/SOE/COVEC/Bases,target=/workspaces/bases,type=bind",
-		"source=/Users/cordmaur/Onedrive/Trabalho/SOE/COVEC/RelatoriosChuva/reports_folder,target=/workspaces/reports_folder,type=bind",
-		"source=/Users/cordmaur/Projects/INPERainDownloader,target=/workspaces/INPERainDownloader,type=bind"
+		// "source=/Users/cordmaur/Library/CloudStorage/OneDrive-AgênciaNacionaldeÁguas/Trabalho/SOE/COVEC/Bases,target=/workspaces/bases,type=bind",
+		// "source=/Users/cordmaur/Onedrive/Trabalho/SOE/COVEC/RelatoriosChuva/reports_folder,target=/workspaces/reports_folder,type=bind",
+		// "source=/Users/cordmaur/Projects/INPERainDownloader,target=/workspaces/INPERainDownloader,type=bind"
+		"source=D:/Projects/merge-downloader,target=/workspaces/merge-downloader,type=bind",
+		"source=D:/OneDrive/Trabalho/SOE/COVEC/RelatoriosChuva/reports_folder,target=/workspaces/reports_folder,type=bind",
+		"source=D:/OneDrive/Trabalho/SOE/COVEC/Bases,target=/workspaces/bases,type=bind"
+		
 	],
 	"runArgs": [
 		"--memory=4g",
 		"--memory-swap=20g",
 		"--oom-kill-disable"
 	],
-	"postCreateCommand": "pip install -e .; pip install -e ../INPERainDownloader/.",
+	"postCreateCommand": "pip install -e .; pip install -e ../merge-downloader/.",
 	"forwardPorts": [],
 	"customizations": {
 		"vscode": {

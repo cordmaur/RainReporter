@@ -13,9 +13,9 @@ import pandas as pd
 import geopandas as gpd
 import xarray as xr
 
-from raindownloader.downloader import Downloader
-from raindownloader.utils import DateProcessor
-from raindownloader.inpeparser import INPEParsers, INPETypes
+from mergedownloader.downloader import Downloader
+from mergedownloader.utils import DateProcessor
+from mergedownloader.inpeparser import INPEParsers, INPETypes
 
 from rainreporter.utils import open_json_file
 from .mapper import Mapper

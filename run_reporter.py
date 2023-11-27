@@ -5,7 +5,7 @@ import argparse
 import datetime
 from pathlib import Path
 
-from raindownloader.inpeparser import INPEParsers
+from mergedownloader.inpeparser import INPEParsers
 from rainreporter.reporter import Reporter
 
 

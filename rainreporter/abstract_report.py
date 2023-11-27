@@ -4,8 +4,8 @@ Defines the AbstractReport class
 from pathlib import Path
 import abc
 from typing import List, Dict, Optional, Union, Tuple
-from raindownloader.downloader import Downloader
-from raindownloader.parser import BaseParser
+from mergedownloader.downloader import Downloader
+from mergedownloader.parser import BaseParser
 
 from .mapper import Mapper
 
