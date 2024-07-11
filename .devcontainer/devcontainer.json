@@ -14,14 +14,13 @@
 		"source=D:/Projects/merge-downloader,target=/workspaces/merge-downloader,type=bind",
 		"source=D:/OneDrive/Trabalho/SOE/COVEC/RelatoriosChuva/reports_folder,target=/workspaces/reports_folder,type=bind",
 		"source=D:/OneDrive/Trabalho/SOE/COVEC/Bases,target=/workspaces/bases,type=bind"
-		
 	],
 	"runArgs": [
 		"--memory=4g",
 		"--memory-swap=20g",
 		"--oom-kill-disable"
 	],
-	"postCreateCommand": "pip install -e .; pip install -e ../merge-downloader/.",
+	"postCreateCommand": "pip install -e .; pip install -e ../merge-downloader/.; pip install pypdf pyjson5",
 	"forwardPorts": [],
 	"customizations": {
 		"vscode": {

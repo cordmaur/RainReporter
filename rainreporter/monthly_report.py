@@ -1,6 +1,7 @@
 """
 This module implements the monthly report class. 
 """
+
 from pathlib import Path
 from typing import Union, Optional, Dict
 from datetime import datetime
@@ -97,7 +98,7 @@ class MonthlyReport(AbstractReport):
         fig.clear()
 
         gridspec = fig.add_gridspec(
-            2, 3, width_ratios=[0.3, 0.3, 0.3], height_ratios=[1.2, 1]
+            2, 3, width_ratios=[0.4, 0.3, 0.3], height_ratios=[1.2, 1]
         )
         text_ax = fig.add_subplot(gridspec[0, 0])  # type: ignore
         raster_ax = fig.add_subplot(gridspec[0, 1:])  # type: ignore
@@ -218,9 +219,9 @@ class MonthlyReport(AbstractReport):
         mlt_text = f"MLT de {last_wet_period_str} até "
         mlt_text += f"{DateProcessor.month_abrev(last_date)}: {accum_mlt} mm"  # type: ignore
 
-        plt_ax.text(0, 1, accum_text)
-        plt_ax.text(0, 0.96, mlt_text)
-        plt_ax.text(0, 0.92, "Prec. últimos 12 meses (mm)", fontsize=10)
+        plt_ax.text(-0.50, 1, accum_text)
+        plt_ax.text(-0.50, 0.96, mlt_text)
+        plt_ax.text(-0.50, 0.92, "Prec. últimos 12 meses (mm)", fontsize=10)
         plt_ax.axis("off")
 
         rain_df = rain_df[["Mês", "MLT", "Prec"]]
@@ -228,8 +229,9 @@ class MonthlyReport(AbstractReport):
         table = plt_ax.table(
             cellText=rain_df.iloc[:12].values,
             colLabels=rain_df.columns.to_list(),
-            loc="top",
-            bbox=[0.01, 0.075, 1.5, 0.8],  # type: ignore
+            # loc="top",
+            colWidths=[0.5, 0.25, 0.25],
+            bbox=[-0.5, 0.075, 1.4, 0.8],  # type: ignore
         )
         # set table properties
         table.auto_set_font_size(False)
@@ -305,7 +307,7 @@ class MonthlyReport(AbstractReport):
             dset.close()
 
             rep_axs[0].text(
-                0.01,
+                -0.5,
                 0.05,
                 f"* Prec. acumulada até {counter_date_str}",
                 ha="left",
