@@ -134,6 +134,9 @@ class MonthlyReport(AbstractReport):
             start_date=date, end_date=date, datatype=INPETypes.MONTHLY_ACCUM
         ).squeeze()
 
+        # make sure they have the same shape
+        rain = rain.rio.reproject_match(lta)
+
         # make sure we are comparing the same months
         assert (
             pd.to_datetime(rain.time.values).month
@@ -151,7 +154,7 @@ class MonthlyReport(AbstractReport):
         self.mapper.plot_context_layers(plt_ax=plt_ax, z_max=0, crs=rain.rio.crs)
 
         # create the anomaly raster
-        anomaly = rain.copy()
+        anomaly = lta.copy()
         anomaly.data = rain.data - lta.data
 
         Mapper.plot_raster_shape(
