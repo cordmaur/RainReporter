@@ -5,7 +5,7 @@ from pathlib import Path
 import abc
 from typing import List, Dict, Optional, Union, Tuple
 from mergedownloader.downloader import Downloader
-from mergedownloader.parser import BaseParser
+from mergedownloader.parser import AbstractParser
 
 from .mapper import Mapper
 
@@ -13,7 +13,7 @@ from .mapper import Mapper
 class AbstractReport(abc.ABC):
     """Abstract class to serve as base for each report"""
 
-    parsers: List[BaseParser] = []
+    parsers: List[AbstractParser] = []
 
     def __init__(self, downloader: Downloader, mapper: Mapper):
         self.downloader = downloader

@@ -1,12 +1,13 @@
 """
-This module implements the monthly report class. 
+This module implements the monthly report class.
 """
 
 from pathlib import Path
-from typing import Union, Optional, Dict
+from typing import Union, Optional, Dict, Tuple
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -15,22 +16,16 @@ import geopandas as gpd
 import xarray as xr
 
 from mergedownloader.downloader import Downloader
-from mergedownloader.utils import DateProcessor
-from mergedownloader.inpeparser import INPEParsers, INPETypes
+from mergedownloader.utils import DateProcessor, GISUtil
+from mergedownloader.inpeparser import InpeTypes
 
 from rainreporter.utils import open_json_file
 from .mapper import Mapper
-from .reporter import AbstractReport
+from .abstract_report import AbstractReport
 
 
 class MonthlyReport(AbstractReport):
     """Docstring"""
-
-    parsers = [
-        INPEParsers.monthly_accum,
-        INPEParsers.month_accum_manual,
-        INPEParsers.daily_rain_parser,
-    ]
 
     def __init__(
         self,
@@ -38,7 +33,7 @@ class MonthlyReport(AbstractReport):
         mapper: Mapper,
         shp_file: Union[str, Path],
         name: str = "",
-        month_lbk: Optional[int] = 23,
+        month_lbk: Optional[int] = 24,
         wet_month: int = 10,
     ):
         super().__init__(downloader=downloader, mapper=mapper)
@@ -92,7 +87,7 @@ class MonthlyReport(AbstractReport):
         )
 
     @staticmethod
-    def create_report_layout() -> tuple:
+    def create_report_layout() -> Tuple:
         """Create the layout and return figure and axes as a list"""
         fig = plt.figure(num=1, constrained_layout=True, figsize=(10, 10))
         fig.clear()
@@ -126,12 +121,12 @@ class MonthlyReport(AbstractReport):
 
         # get the raster for the accumulated rain in the month
         rain = self.downloader.create_cube(
-            start_date=date, end_date=date, datatype=INPETypes.MONTHLY_ACCUM_MANUAL
+            start_date=date, end_date=date, datatype=InpeTypes.MONTHLY_ACCUM_MANUAL
         ).squeeze()
 
-        # get the rater for the long term average in the same month
+        # get the raster for the long term average in the same month
         lta = self.downloader.create_cube(
-            start_date=date, end_date=date, datatype=INPETypes.MONTHLY_ACCUM
+            start_date=date, end_date=date, datatype=InpeTypes.MONTHLY_ACCUM
         ).squeeze()
 
         # make sure they have the same shape
@@ -245,11 +240,71 @@ class MonthlyReport(AbstractReport):
             table[0, i].set_height(0.05)
             table[0, i].set_text_props(weight="bold")
 
+    def _create_rain_lta_df(self, date: Union[datetime, str]) -> pd.DataFrame:
+        """
+        Create a dataframe with rain and lta for the monthly report
+        """
+        # Parse date
+        date = DateProcessor.parse_date(date)
+
+        ### Open the cubes
+        # get the period to be considered
+        start_month, end_month = DateProcessor.last_n_months(date, self.month_lbk)
+
+        # get the rain
+        rain = self.downloader.create_cube(
+            start_month, end_month, datatype=InpeTypes.MONTHLY_ACCUM_MANUAL
+        )
+        # get the long term average
+        lta = self.downloader.create_cube(
+            start_month, end_month, datatype=InpeTypes.MONTHLY_ACCUM
+        )
+
+        ### Project the shapefile
+        self.shp = self.shp.to_crs(rain.rio.crs)
+
+        ### Get the time series of the monthly rain
+        rain_ts = GISUtil.get_time_series(
+            cube=rain, shp=self.shp, reducer=xr.DataArray.mean, keep_dim="time"
+        )
+
+        lta_ts = GISUtil.get_time_series(
+            cube=lta, shp=self.shp, reducer=xr.DataArray.mean, keep_dim="time"
+        )
+
+        # put everything into a dataframe
+        dframe = pd.DataFrame(rain_ts)
+        dframe["lta"] = lta_ts.values
+        dframe["basin"] = self.name
+
+        # reset the index just to convert it to string
+        dframe.reset_index(inplace=True)
+        dframe.index = pd.Index(dframe["time"].astype("str").str[:7])
+        dframe.index.name = "month"
+
+        # after loading the cubes, if we are retrieving the current month
+        # we need to include an observation stating the last day considered
+        # for the accumulation. THe last considered date will be called last_date
+        today = DateProcessor.today()
+        dframe["last_date"] = None
+        if (date.year == today.year) and (date.month == today.month):
+            file = self.downloader.get_file(date, InpeTypes.MONTHLY_ACCUM_MANUAL)
+            dset = xr.open_dataset(file)
+            last_date = DateProcessor.parse_date(dset.attrs["last_day"])
+            dset.close()
+
+            dframe.iloc[-1, -1] = last_date
+
+        return dframe
+
     def generate_report(
         self,
         date_str: str,
     ):  ## pylint: disable=arguments-differ
         """Docstring"""
+
+        backend = matplotlib.get_backend()
+        matplotlib.use("Agg")
 
         ### Before doing anything, check if the given month is the actual month
         # and if we have at least 1 day for it, otherwise, generate for the previous month
@@ -259,11 +314,11 @@ class MonthlyReport(AbstractReport):
         # if we are in the current month, check if there is at least the first
         # date available, otherwise, perform the previous report
         if date.month >= today.month:
-            valid_month = self.downloader.remote_file_exists(
-                date + relativedelta(day=1), datatype=INPETypes.DAILY_RAIN
+            file = self.downloader.get_file(
+                date + relativedelta(day=1), datatype=InpeTypes.DAILY_RAIN
             )
 
-            if not valid_month:
+            if file is None:
                 # if month is does not have at least the 1st day available
                 # generate the report for the previous month
                 date = date - relativedelta(months=1)
@@ -286,41 +341,21 @@ class MonthlyReport(AbstractReport):
 
         fig.text(0.01, 1.06, subtitle, ha="left", va="top", fontsize=10)
 
-        ### Open the cubes
-        # get the period to be considered
-        start_month, end_month = DateProcessor.last_n_months(date_str, self.month_lbk)
+        dframe = self._create_rain_lta_df(date)
 
-        # get the rain
-        rain = self.downloader.create_cube(
-            start_month, end_month, datatype=INPETypes.MONTHLY_ACCUM_MANUAL
-        )
-        # get the long term average
-        lta = self.downloader.create_cube(
-            start_month, end_month, datatype=INPETypes.MONTHLY_ACCUM
-        )
-
-        # after loading the cubes, if we are plotting the current month
-        #  we need to include an observation stating the last day considered
-        # for the accumulation. THe last considered date will be called last_date
-        if (date.year == today.year) and (date.month == today.month):
-            file = self.downloader.get_file(date, INPETypes.MONTHLY_ACCUM_MANUAL)
-            dset = xr.open_dataset(file)
-            last_date = DateProcessor.parse_date(dset.attrs["last_day"])
-            counter_date_str = DateProcessor.pretty_date(last_date)
-            dset.close()
-
+        # if there is "last_date" info in the dataframe, it means
+        # we are not accumulating the whole month and should inform that
+        if (~dframe["last_date"].isna()).any():
+            last_date = dframe["last_date"].values[-1]
             rep_axs[0].text(
                 -0.5,
                 0.05,
-                f"* Prec. acumulada até {counter_date_str}",
+                f"* Prec. acumulada até {DateProcessor.pretty_date(last_date)}",
                 ha="left",
                 va="top",
             )
         else:
             last_date = None
-
-        ### Project the shapefile
-        self.shp = self.shp.to_crs(rain.rio.crs)
 
         ### plot the anomaly raster
         if date.month == today.month:
@@ -330,33 +365,48 @@ class MonthlyReport(AbstractReport):
 
         self.plot_anomaly_map(date=anomaly_date, shp=self.shp, plt_ax=rep_axs[1])
 
-        ### Plot chart
-        # get the time series of the monthly rain
-        rain_ts = Downloader.get_time_series(
-            cube=rain, shp=self.shp, reducer=xr.DataArray.mean, keep_dim="time"
-        )
-
-        lta_ts = Downloader.get_time_series(
-            cube=lta, shp=self.shp, reducer=xr.DataArray.mean, keep_dim="time"
-        )
-
-        # put everything into a dataframe
-        dframe = pd.DataFrame(rain_ts)
-        dframe["lta"] = lta_ts.values
-
-        # reset the index just to convert it to string
-        dframe.reset_index(inplace=True)
-        dframe["time"] = dframe["time"].astype("str")
-        dframe.index = pd.Index(dframe["time"].str[:7])
-
-        rep_axs[-1].bar(dframe.index, dframe["monthacum"])
+        rep_axs[-1].bar(dframe.index, dframe["pacum"])
         rep_axs[-1].plot(dframe.index, dframe["lta"], color="orange", marker="x")
         rep_axs[-1].tick_params(axis="x", labelrotation=90)
         rep_axs[-1].set_ylabel("Precipitação mensal (mm)")
 
         ### Write the tabular information
         self.write_tabular_monthly(
-            plt_ax=rep_axs[0], rain_ts=rain_ts, lta_ts=lta_ts, last_date=last_date
+            plt_ax=rep_axs[0],
+            rain_ts=dframe["pacum"],
+            lta_ts=dframe["lta"],
+            last_date=last_date,
         )
 
-        return fig, rep_axs, rain_ts, lta_ts, self.shp
+        matplotlib.use(backend)
+
+        return fig, rep_axs, dframe, self.shp
+
+    def export_report_data(self, date: Union[str, datetime], file: Path):
+        """
+        The export data for the report will save the rain and long term average that
+        will be used in the powerBI report.
+        In addition, we need to save the anomaly map that will also be used in the powerBI.
+
+        Args:
+            date (str): The date of the report
+
+        """
+        if file.exists():
+            # First, let's open the dataframe
+            df = pd.read_csv(file, index_col=["month", "basin"], parse_dates=["time"])
+
+        # Load the dataframe for this report
+        dframe = self._create_rain_lta_df(date)
+
+        # Create a multi-index with month and basin
+        dframe = dframe.reset_index()
+        dframe.index = pd.MultiIndex.from_arrays([dframe["month"], dframe["basin"]])
+
+        # drop month and basin columns (they are already in index)
+        dframe = dframe.drop(columns=["basin", "month"])
+
+        # Merge the dataframes
+        dframe = dframe.combine_first(df)
+
+        dframe.to_csv(file)

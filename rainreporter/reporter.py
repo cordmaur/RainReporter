@@ -23,7 +23,7 @@ from .utils import open_json_file
 
 from .abstract_report import AbstractReport
 from .monthly_report import MonthlyReport
-from .daily_report import DailyReport
+# from .daily_report import DailyReport
 from .mapper import Mapper
 
 
@@ -32,14 +32,12 @@ class Reporter:
 
     templates: Dict[str, type[AbstractReport]] = {
         "Mensal": MonthlyReport,
-        "Diario": DailyReport,
+        # "Diario": DailyReport,
     }
 
     def __init__(
         self,
-        server: str,
-        download_folder: Union[Path, str],
-        avoid_update: bool = True,
+        downloader: Downloader,
         config_file: Optional[Union[str, Path]] = None,
         bases_folder: Optional[Union[Path, str]] = None,
         log_level: int = logging.DEBUG,
@@ -53,25 +51,15 @@ class Reporter:
         :param bases_folder: Folder to store the geographic bases.
         :param log_level: Logging level, defaults to logging.DEBUG
         """
-        # get the parsers necessary for the reports
-        parsers = set()
-        for template in Reporter.templates.values():
-            parsers = parsers.union(set(template.parsers))
 
         # create a downloader instance
-        self.downloader = Downloader(
-            server=server,
-            parsers=parsers,  # type: ignore
-            local_folder=download_folder,
-            avoid_update=avoid_update,
-            log_level=log_level,
-        )
+        self.downloader = downloader
 
         # create the logger
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
         self.logger.handlers.clear()
-        self.logger.addHandler(self.downloader.logger.handlers[0])
+        self.logger.addHandler(self.downloader._logger.handlers[0])
 
         # load the config file
         self.logger.info("Configuring Reporter class")
@@ -85,7 +73,6 @@ class Reporter:
             config=self.config["shape_style"], shapes=self.config["context_shapes"]
         )
 
-        self.download_folder = Path(download_folder)
         self.bases_folder = bases_folder
 
     @staticmethod
@@ -132,6 +119,9 @@ class Reporter:
         )
 
         return report.generate_report(date_str=date_str)  # type: ignore
+
+    # todo: Organize this generate_report. It should be easier to start it ad-hoc, such as 
+    # by passing the .json5 file or by passing the dictionary with the configuration. 
 
     def generate_pdf(
         self, json_file: Union[Path, str, Dict], output_folder: Union[Path, str]

@@ -1,6 +1,8 @@
 """The MapReporter class is the responsible for plotting all the maps in the reports"""
 from typing import Dict, Optional, Tuple, Union
 from pathlib import Path
+from functools import lru_cache
+
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
@@ -28,10 +30,20 @@ class Mapper:
                 file = (Path(__file__).parent) / file
 
             print(file)
-            shapes[shape]["gdf"] = gpd.read_file(file)
+            shapes[shape]["gdf"] = Mapper.read_shape(file)
 
         self.shapes = shapes
         self.config = config
+
+    @lru_cache(maxsize=8)    
+    @staticmethod
+    def read_shape(file: Path) -> gpd.GeoDataFrame:
+        """
+        Load a shape file in memory with LRU_CACHE
+        """
+
+        return gpd.read_file(file)
+
 
     @staticmethod
     def bounds(
