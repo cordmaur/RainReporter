@@ -3,17 +3,14 @@ Defines the AbstractReport class
 """
 from pathlib import Path
 import abc
-from typing import List, Dict, Optional, Union, Tuple
+from typing import Dict, Optional, Union, Tuple
 from mergedownloader.downloader import Downloader
-from mergedownloader.parser import AbstractParser
 
 from .mapper import Mapper
 
 
 class AbstractReport(abc.ABC):
     """Abstract class to serve as base for each report"""
-
-    parsers: List[AbstractParser] = []
 
     def __init__(self, downloader: Downloader, mapper: Mapper):
         self.downloader = downloader
@@ -32,4 +29,8 @@ class AbstractReport(abc.ABC):
         config: Dict,
         bases_folder: Optional[Union[str, Path]] = None,
     ):
-        """Create the report class based on a json specification"""
+        """Create the report class based on a dictionary specification"""
+
+    @abc.abstractmethod
+    def export_report_data(self, *args, **kwargs):
+        """Docstring"""

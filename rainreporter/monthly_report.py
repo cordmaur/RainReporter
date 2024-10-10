@@ -7,6 +7,8 @@ from typing import Union, Optional, Dict, Tuple
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+from unidecode import unidecode
+
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -19,7 +21,6 @@ from mergedownloader.downloader import Downloader
 from mergedownloader.utils import DateProcessor, GISUtil
 from mergedownloader.inpeparser import InpeTypes
 
-from rainreporter.utils import open_json_file
 from .mapper import Mapper
 from .abstract_report import AbstractReport
 
@@ -43,24 +44,6 @@ class MonthlyReport(AbstractReport):
         self.shp = gpd.read_file(shp_file)
         self.month_lbk = month_lbk if month_lbk is not None else 23
         self.wet_month = wet_month
-
-    @classmethod
-    def from_json_file(
-        cls,
-        downloader: Downloader,
-        mapper: Mapper,
-        json_file: Union[str, Path],
-        bases_folder: Optional[Union[str, Path]] = None,
-    ):
-        """Create a MonthlyReport instance based on the json file"""
-        config = open_json_file(json_file)
-
-        return cls.from_dict(
-            downloader=downloader,
-            mapper=mapper,
-            config=config,
-            bases_folder=bases_folder,
-        )
 
     @classmethod
     def from_dict(
@@ -295,6 +278,7 @@ class MonthlyReport(AbstractReport):
 
             dframe.iloc[-1, -1] = last_date
 
+        dframe['last_date'] = pd.to_datetime(dframe['last_date'])
         return dframe
 
     def generate_report(
@@ -382,7 +366,9 @@ class MonthlyReport(AbstractReport):
 
         return fig, rep_axs, dframe, self.shp
 
-    def export_report_data(self, date: Union[str, datetime], file: Path):
+    def export_report_data(  # pylint: disable=arguments-differ
+        self, date: Union[str, datetime], file: Path, assets_folder: Path
+    ):
         """
         The export data for the report will save the rain and long term average that
         will be used in the powerBI report.
@@ -392,9 +378,6 @@ class MonthlyReport(AbstractReport):
             date (str): The date of the report
 
         """
-        if file.exists():
-            # First, let's open the dataframe
-            df = pd.read_csv(file, index_col=["month", "basin"], parse_dates=["time"])
 
         # Load the dataframe for this report
         dframe = self._create_rain_lta_df(date)
@@ -406,7 +389,27 @@ class MonthlyReport(AbstractReport):
         # drop month and basin columns (they are already in index)
         dframe = dframe.drop(columns=["basin", "month"])
 
-        # Merge the dataframes
-        dframe = dframe.combine_first(df)
+        # Save the anomaly map for the specific date
+        backend = matplotlib.get_backend()
+        matplotlib.use("Agg")
 
-        dframe.to_csv(file)
+        month_str = DateProcessor.pretty_date(date, "%Y-%m")
+        fig, ax = plt.subplots()
+        self.plot_anomaly_map(date=date, shp=self.shp, plt_ax=ax)
+        filename = unidecode(self.name).replace(" ", "_") + "-" + month_str
+        fig.savefig(assets_folder / f"{filename}.png")
+
+        dframe.loc[month_str, "anomaly_map"] = f"{filename}.png"
+
+        # return to original backend
+        matplotlib.use(backend)
+
+        # Merge the dataframes to save to disk
+        if file.exists():
+            # First, let's open the dataframe
+            df = pd.read_parquet(file)
+            # df = pd.read_csv(file, index_col=["month", "basin"], parse_dates=["time"])
+
+            dframe = dframe.combine_first(df)
+
+        dframe.to_parquet(file)

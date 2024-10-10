@@ -24,13 +24,13 @@ Abaixo a descrição do relatório comentado:
             "nome": "São Francisco",
             // tipo de relatório. Pode ser Mensal ou Diário
             "tipo": "Mensal",
-            "shp": "bacias_interesse/bacia_Sao_Francisco.shp",
+            "shp": "/workspaces/bases/bacias de interesse SOE/bacia_Sao_Francisco.shp",
 
             // marca o mês do início do período chuvoso (em inteiros)
             'inicio_periodo_chuvoso': 10,
 
             // opcional: indica o número de meses passados para fazer o gráfico
-            'total_meses': 23
+            'total_meses': 24
         },
         // {
         //     "nome": "Jaguari",

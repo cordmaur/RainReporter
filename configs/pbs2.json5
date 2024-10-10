@@ -30,7 +30,7 @@ Abaixo a descrição do relatório comentado:
             'inicio_periodo_chuvoso': 10,
 
             // opcional: indica o número de meses passados para fazer o gráfico
-            'total_meses': 4
+            'total_meses': 24
         },
 
     ],

@@ -1,11 +1,12 @@
 """
 Main module for the reporter class
 """
+
 import io
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import Union, Optional, Dict, Type, Any
+from typing import Union, Optional, Dict, Type, Any, Tuple
 
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -23,6 +24,7 @@ from .utils import open_json_file
 
 from .abstract_report import AbstractReport
 from .monthly_report import MonthlyReport
+
 # from .daily_report import DailyReport
 from .mapper import Mapper
 
@@ -98,35 +100,77 @@ class Reporter:
         geod = Geod(ellps="WGS84")
         return abs(geod.geometry_area_perimeter(geom)[0]) / 1e6
 
-    def generate_report(
-        self, rep_type: Union[str, Type[AbstractReport]], date_str: str, **kwargs
-    ):
-        """Docstring"""
+    def generate_report(self, date_str: str, attrs: Dict) -> Tuple:
+        """
+        Generate a single report. It can be a monthly or daily report.
+        The simple report must not be confused with the ReportCollection (PDF) that
+        aggregates several reports in one document.
 
-        if isinstance(rep_type, str):
-            template = Reporter.templates[rep_type]
-        else:
-            template = rep_type
+        :param template: The template to use. It can be a string with the name of the template
+            or a class that inherits from AbstractReport
+        :param date_str: The date to generate the report for
+        :param attrs: The attributes to use for the report as a dictionary.
+        :return: The report as a Tuple [Fig, Axes, DataFrame, GeoDataFrame]
+        """
 
-        self.logger.info("Generating report for date %s", date_str)
-        self.logger.info("Using report template %s", template)
-        self.logger.info("Configurations: %s", kwargs)
-        report = template.from_dict(
+        # Get the correct report template
+        template = Reporter.templates[attrs["tipo"]]
+
+        # create the reporter
+        reporter = template.from_dict(
             downloader=self.downloader,
             mapper=self.mapper,
-            config=kwargs,
+            config=attrs,
             bases_folder=self.bases_folder,
         )
 
-        return report.generate_report(date_str=date_str)  # type: ignore
+        # return the report for the specific date
+        return reporter.generate_report(date_str)
 
-    # todo: Organize this generate_report. It should be easier to start it ad-hoc, such as 
-    # by passing the .json5 file or by passing the dictionary with the configuration. 
+    def export_report_data(
+        self,
+        date_str: str,
+        attrs: Dict,
+        output_db: Union[Path, str],
+        assets_folder: Union[Path, str],
+    ):
+        """
+        Export data for a single report. It can be a monthly or daily report.
+        The simple report must not be confused with the ReportCollection (PDF) that
+        aggregates several reports in one document.
+
+        :param template: The template to use. It can be a string with the name of the template
+            or a class that inherits from AbstractReport
+        :param date_str: The date to generate the report for
+        :param attrs: The attributes to use for the report as a dictionary.
+        :param output_db: The output database to append data to
+        """
+
+        # Get the correct report template
+        template = Reporter.templates[attrs["tipo"]]
+
+        # create the reporter
+        reporter = template.from_dict(
+            downloader=self.downloader,
+            mapper=self.mapper,
+            config=attrs,
+            bases_folder=self.bases_folder,
+        )
+
+        # call the export_report_data for the specific date
+        return reporter.export_report_data(
+            date_str, file=Path(output_db), assets_folder=Path(assets_folder)
+        )
 
     def generate_pdf(
         self, json_file: Union[Path, str, Dict], output_folder: Union[Path, str]
     ):
-        """Generate a PDF report based on a json file specification"""
+        """
+        Generate a ReportColleciton (PDF) on a json file specification.
+
+        :param json_file: The json file specification
+        :param output_folder: The output folder
+        """
 
         # open the json file with the pdf specification
         pdf_config = (
@@ -144,13 +188,11 @@ class Reporter:
         pdf_doc = PdfMerger()
         for report_config in pdf_config["relatorios"]:
             try:
-                result = self.generate_report(
-                    rep_type=report_config["tipo"], date_str=date_str, **report_config
-                )
+                report = self.generate_report(date_str=date_str, attrs=report_config)
 
                 # get the figure
                 # plt_axs = result[0]
-                fig = result[0] #.figure
+                fig = report[0]  # .figure
 
                 # save the PDF to a memory file
                 file = io.BytesIO()
@@ -262,212 +304,3 @@ class Reporter:
             duration=300,
             loop=1,
         )
-
-    # @staticmethod
-    # def rain_in_geoms(rain: xr.DataArray, geometries: Iterable[Geometry]):
-    #     """
-    #     Calculate the rain inside the given geometries and returns a dictionary.
-    #     The geometries are shapely.Geometry type and it can be a GeoSeries from Pandas
-    #     """
-
-    #     # Let's use clip to ignore data outide the geometry
-    #     clipped = rain.rio.clip(geometries)
-
-    #     # calculate the mean height in mm
-    #     height = float(clipped.mean())
-
-    #     # calculate the area in km^2
-    #     areas = pd.Series(map(Reporter.calc_geodesic_area, geometries))
-    #     area = areas.sum()
-
-    #     # multiply by area of geometries to get total volume em km^3
-    #     volume = area * (height / 1e6)
-
-    #     results = {"volume (kmˆ3)": volume, "area (kmˆ2)": area, "height (mm)": height}
-    #     return results
-
-    # @staticmethod
-    # def write_tabular_info(plt_ax: plt.Axes, stats: dict):
-    #     """Prepare the tabular section of the report"""
-
-    #     plt_ax.axis("off")
-
-    #     start_date = DateProcessor.pretty_date(stats["start_date"])
-    #     end_date = DateProcessor.pretty_date(stats["end_date"])
-
-    #     title_str = f"Período: de {start_date} até {end_date}"
-    #     plt_ax.text(0.04, 0.97, title_str, fontsize=12)
-
-    #     area_str = f"Área  total: {stats['area (kmˆ2)']:.2f} km²"
-    #     plt_ax.text(0, 0.90, area_str)
-
-    #     rain_str = f"Chuva acumulada na bacia: {stats['height (mm)']:.0f} mm"
-    #     plt_ax.text(0, 0.85, rain_str)
-
-    #     accum_str = f"Chuva esperada na bacia: {stats['mean height (mm)']:.0f} mm"
-    #     plt_ax.text(0, 0.80, accum_str)
-
-    #     volume_str = f"Volume de chuva na bacia: {stats['volume (kmˆ3)']:.0f} km³"
-    #     plt_ax.text(0, 0.75, volume_str)
-
-    #     volume_str = (
-    #         f"Volume esperado de chuva na bacia: {stats['mean volume (kmˆ3)']:.0f} km³"
-    #     )
-    #     plt_ax.text(0, 0.7, volume_str)
-
-    # def daily_rain_report(
-    #     self,
-    #     start_date: str,
-    #     end_date: str,
-    #     shapefile: Union[str, Path],
-    # ):
-    #     """
-    #     Create a rain report for the given period and shapefile (can have multiple features)
-    #     """
-
-    #     # first, let's grab the daily rain in the period
-    #     cube = self.downloader.create_cube(
-    #         start_date=start_date, end_date=end_date, datatype=INPETypes.DAILY_RAIN
-    #     )
-
-    #     # accumulate the rain in the time axis
-    #     rain = cube.sum(dim="time")
-
-    #     # then, open the shapefile
-    #     shp = gpd.read_file(shapefile)
-
-    #     # check if there is something in the shapefile
-    #     if len(shp) == 0:
-    #         raise ValueError("No elements in the input shapefile")
-
-    #     if len(shp) > 1:
-    #         print(f"{len(shp)} featuers found in shapefile, selecting all of them.")
-
-    #     # convert the shapefile to the raster CRS (more cost effective)
-    #     shp.to_crs(rain.rio.crs, inplace=True)
-
-    #     ### Create the layout for the report using Matplotlib Gridspec
-    #     fig, rep_axs = RainReporter.create_report_layout()
-    #     fig.suptitle(Path(shapefile).stem, fontsize=16)
-
-    #     ### Plot the map with the accumulated rain
-    #     self.plot_raster_shape(raster=rain, shp=shp, plt_ax=rep_axs[1])
-
-    #     ### Add cities and state boundaries
-    #     self.map_reporter.plot_states(plt_ax=rep_axs[1])
-    #     self.map_reporter.plot_cities(plt_ax=rep_axs[1])
-
-    #     ### Plot the daily rain graph
-    #     daily_rain = Downloader.get_time_series(
-    #         cube=cube, shp=shp, reducer=xr.DataArray.mean
-    #     )
-
-    #     # plot the bars
-    #     RainReporter.plot_daily_rain(plt_ax=rep_axs[2], time_series=daily_rain)
-
-    #     ### Plot the daily average rain
-    #     # get the daily average cube
-    #     avg_cube = self.downloader.create_cube(
-    #         start_date=start_date, end_date=end_date, datatype=INPETypes.DAILY_AVERAGE
-    #     )
-
-    #     # get the time series of the daily average within the basin
-    #     daily_average = Downloader.get_time_series(
-    #         cube=avg_cube, shp=shp, reducer=xr.DataArray.mean
-    #     )
-
-    #     # at the end, make sure the indices are equivalent
-    #     daily_average.index = cube["time"].data
-
-    #     # Plot the line
-    #     RainReporter.plot_daily_average(plt_ax=rep_axs[2], time_series=daily_average)
-
-    #     # turn on the legend
-    #     rep_axs[2].legend()
-
-    #     ### write the tabular text of the report
-    #     rain_stats = self.rain_in_geoms(rain, shp.geometry)
-    #     mean_height = daily_average.sum()
-    #     mean_volume = mean_height * rain_stats["area (kmˆ2)"] / 1e6
-    #     rain_stats.update(
-    #         {
-    #             "start_date": start_date,
-    #             "end_date": end_date,
-    #             "mean height (mm)": mean_height,
-    #             "mean volume (kmˆ3)": mean_volume,
-    #         }
-    #     )
-    #     RainReporter.write_tabular_info(plt_ax=rep_axs[0], stats=rain_stats)
-
-    #     return rep_axs, rain, shp, cube
-    # @staticmethod
-    # def plot_daily_rain(plt_ax: plt.Axes, time_series: pd.Series):
-    #     """Create the plot with the daily rain in the period"""
-
-    #     plt_ax.bar(x=time_series.index, height=time_series.to_list(), label="Chuva")
-
-    #     # format the x-axis labels
-    #     date_format = mdates.DateFormatter("%d/%m")
-    #     plt_ax.xaxis.set_major_formatter(date_format)
-    #     plt.xticks(rotation=60, ha="right")
-
-    #     # get the years
-    #     dates = pd.Series(time_series.index)
-    #     plt_ax.set_xlabel(f"Chuva média na bacia - Ano: {list(dates.dt.year.unique())}")
-
-    #     plt_ax.set_ylabel("Chuva média na bacia (mm)")
-    #     plt_ax.set_title("Chuva Diária Média na Bacia")
-
-    # @staticmethod
-    # def plot_daily_average(plt_ax: plt.Axes, time_series: pd.Series):
-    #     """Plot the daily average as line, for reference"""
-
-    #     plt_ax.plot(
-    #         time_series.index,
-    #         time_series.values,
-    #         label="Média diária",
-    #         color="orange",
-    #     )
-
-    # @staticmethod
-    # def plot_monthly_rain_gutto(
-    #     plt_ax: plt.Axes,
-    #     cube: xr.DataArray,
-    #     shp: gpd.GeoDataFrame,
-    #     plot_mlt: bool = True,
-    #     **kw_formatting,
-    # ):
-    #     """Plot the monthly rain in a given axes"""
-
-    #     # get the time series
-    #     time_series = Downloader.get_time_series(
-    #         cube=cube, shp=shp, reducer=xr.DataArray.mean, keep_dim="time"
-    #     )
-
-    #     time_series.plot(ax=plt_ax, legend=True, **kw_formatting)
-
-    #     if plot_mlt:
-    #         # create a dataframe
-    #         dframe = time_series.to_frame().reset_index()
-
-    #         mlt = (
-    #             dframe.groupby(by=dframe["time"].dt.month)
-    #             .mean()
-    #             .rename(columns={time_series.name: "MLT"})
-    #         )
-
-    #         # reindex DF with the month numbers
-    #         dframe.set_index(dframe["time"].dt.month.values)
-    #         dframe = dframe.join(mlt)
-    #         dframe.set_index("time", inplace=True)
-
-    #         dframe.plot(
-    #             y="MLT",
-    #             color="orange",
-    #             linestyle="--",
-    #             marker="o",
-    #             ax=plt_ax,
-    #             linewidth=0.9,
-    #         )
-
-    #         return mlt
