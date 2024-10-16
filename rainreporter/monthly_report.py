@@ -331,6 +331,11 @@ class MonthlyReport(AbstractReport):
         # we are not accumulating the whole month and should inform that
         if (~dframe["last_date"].isna()).any():
             last_date = dframe["last_date"].values[-1]
+
+            # convert last date to python datetime if it is in pandas format
+            if not isinstance(last_date, datetime):
+                last_date = pd.Timestamp(last_date).to_pydatetime()
+
             rep_axs[0].text(
                 -0.5,
                 0.05,
