@@ -6,7 +6,7 @@ import io
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import Union, Optional, Dict, Type, Any, Tuple
+from typing import Union, Optional, Dict, Any, Tuple
 
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ from shapely import Geometry
 from pyproj import Geod
 import xarray as xr
 
-from pypdf import PdfMerger, PdfReader
+from pypdf import PdfWriter, PdfReader
 
 from mergedownloader.downloader import Downloader
 from mergedownloader.utils import DateProcessor
@@ -185,7 +185,7 @@ class Reporter:
 
         self.logger.info("Preparing to generate file %s", filename)
 
-        pdf_doc = PdfMerger()
+        pdf_doc = PdfWriter()
         for report_config in pdf_config["relatorios"]:
             try:
                 report = self.generate_report(date_str=date_str, attrs=report_config)
@@ -256,7 +256,7 @@ class Reporter:
         for file in files:
             try:
                 self.generate_pdf(json_file=file, output_folder=output_folder)
-            except Exception as error:
+            except Exception as error:  # pylint: disable=W0718
                 self.logger.error(error)
 
     @staticmethod

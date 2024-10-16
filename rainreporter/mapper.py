@@ -35,7 +35,7 @@ class Mapper:
         self.shapes = shapes
         self.config = config
 
-    @lru_cache(maxsize=8)    
+    @lru_cache(maxsize=8)
     @staticmethod
     def read_shape(file: Path) -> gpd.GeoDataFrame:
         """
@@ -189,7 +189,7 @@ class Mapper:
                     )
                 )
             # adjust overlapping texts
-            adjust_text(texts, ax=plt_ax, expand_axes=True, ensure_inside_axes=True)
+            adjust_text(texts, ax=plt_ax, expand_axes=False, ensure_inside_axes=True)
 
         # # dispatch to the plot function according to the shape type
         # if shape["type"].lower() == "point":

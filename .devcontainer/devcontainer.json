@@ -20,7 +20,7 @@
 		"--memory-swap=20g",
 		"--oom-kill-disable"
 	],
-	"postCreateCommand": "pip install -e .; pip install -e ../merge-downloader/.; pip install pypdf pyjson5",
+	"postCreateCommand": "pip install -e .; pip install -e ../merge-downloader/.; pip install pypdf pyjson5 unidecode fastparquet",
 	"forwardPorts": [],
 	"customizations": {
 		"vscode": {
@@ -31,7 +31,8 @@
 				"ms-toolsai.vscode-jupyter-cell-tags",
 				"ms-python.pylint",
 				"ms-python.vscode-pylance",
-				"ms-python.black-formatter"
+				"ms-python.black-formatter",
+				"Codeium.codeium"
 			]
 		}
 	}
