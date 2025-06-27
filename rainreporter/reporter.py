@@ -25,7 +25,7 @@ from .utils import open_json_file
 from .abstract_report import AbstractReport
 from .monthly_report import MonthlyReport
 
-# from .daily_report import DailyReport
+from .daily_report import DailyReport
 from .mapper import Mapper
 
 
@@ -34,7 +34,7 @@ class Reporter:
 
     templates: Dict[str, type[AbstractReport]] = {
         "Mensal": MonthlyReport,
-        # "Diario": DailyReport,
+        "Diario": DailyReport,
     }
 
     def __init__(
@@ -200,6 +200,9 @@ class Reporter:
 
                 # append the page to the file
                 pdf_doc.append(PdfReader(file))
+
+                dframe = report[2]
+                dframe.to_excel((Path(output_folder) / filename).with_suffix(".xlsx"))
 
             except Exception as error:  # pylint: disable=W0703
                 self.logger.error(error)

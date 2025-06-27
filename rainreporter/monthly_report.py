@@ -46,7 +46,7 @@ class MonthlyReport(AbstractReport):
         self.wet_month = wet_month
 
     @classmethod
-    def from_dict(
+    def from_dict(  # type: ignore
         cls,
         downloader: Downloader,
         mapper: Mapper,
@@ -278,7 +278,7 @@ class MonthlyReport(AbstractReport):
 
             dframe.iloc[-1, -1] = last_date
 
-        dframe['last_date'] = pd.to_datetime(dframe['last_date'])
+        dframe["last_date"] = pd.to_datetime(dframe["last_date"])
         return dframe
 
     def generate_report(

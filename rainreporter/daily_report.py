@@ -1,6 +1,7 @@
 """
-This module implements the monthly report class. 
+This module implements the monthly report class.
 """
+
 from pathlib import Path
 from typing import Union, Optional, Dict
 from datetime import datetime, timedelta
@@ -15,7 +16,7 @@ import xarray as xr
 
 from mergedownloader.downloader import Downloader
 from mergedownloader.utils import DateProcessor
-from mergedownloader.inpeparser import INPEParsers, INPETypes
+from mergedownloader.inpeparser import INPE_SERVER, InpeParsers, InpeTypes
 
 from rainreporter.utils import open_json_file
 from .mapper import Mapper
@@ -25,12 +26,12 @@ from .reporter import AbstractReport
 class DailyReport(AbstractReport):
     """Docstring"""
 
-    parsers = [
-        INPEParsers.daily_average,
-        INPEParsers.daily_rain_parser,
-        INPEParsers.daily_wrf,
-        INPEParsers.hourly_wrf,
-    ]
+    # parsers = [
+    #     INPEParsers.daily_average,
+    #     INPEParsers.daily_rain_parser,
+    #     INPEParsers.daily_wrf,
+    #     INPEParsers.hourly_wrf,
+    # ]
 
     def __init__(
         self,
@@ -46,6 +47,9 @@ class DailyReport(AbstractReport):
         self.name = name if name != "" else Path(shp_file).stem
         self.shp = gpd.read_file(shp_file)
         self.days_lbk = days_lbk if days_lbk is not None else 23
+
+    def export_report_data(self, *args, **kwargs):
+        pass
 
     @classmethod
     def from_json_file(
@@ -234,30 +238,33 @@ class DailyReport(AbstractReport):
 
         date_available = False
         while not date_available:
-            date_available = self.downloader.remote_file_exists(
-                end_date, INPETypes.DAILY_RAIN
-            )
-            if not date_available:
+            # check if the date is available
+            # if not, we will try the previous day
+            file = self.downloader.get_file(end_date, InpeTypes.DAILY_RAIN)
+
+            if file is None:
                 end_date = end_date - timedelta(days=1)
+            else:
+                date_available = True
 
         start_date = end_date - timedelta(days=self.days_lbk)
 
         ### Create the cubes
         # create the cube with the daily rain
         rain = self.downloader.create_cube(
-            start_date=start_date, end_date=end_date, datatype=INPETypes.DAILY_RAIN
+            start_date=start_date, end_date=end_date, datatype=InpeTypes.DAILY_RAIN
         )
 
         # create a cube with the average rain in the period
         avg_rain = self.downloader.create_cube(
-            start_date=start_date, end_date=end_date, datatype=INPETypes.DAILY_AVERAGE
+            start_date=start_date, end_date=end_date, datatype=InpeTypes.DAILY_AVERAGE
         )
 
         # get the forecast
         rain_fcst = self.downloader.create_cube(
             start_date=end_date + timedelta(days=1),
             end_date=end_date + timedelta(days=7),
-            datatype=INPETypes.DAILY_WRF,
+            datatype=InpeTypes.DAILY_WRF,
             ref_date=end_date,
         )
 
@@ -265,7 +272,7 @@ class DailyReport(AbstractReport):
         avg_rain_fcst = self.downloader.create_cube(
             start_date=end_date + timedelta(days=1),
             end_date=end_date + timedelta(days=7),
-            datatype=INPETypes.DAILY_AVERAGE,
+            datatype=InpeTypes.DAILY_AVERAGE,
         )
 
         ### Align the cubes
