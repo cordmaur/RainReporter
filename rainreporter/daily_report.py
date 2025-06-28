@@ -1,6 +1,7 @@
 """
-This module implements the monthly report class. 
+This module implements the monthly report class.
 """
+
 from pathlib import Path
 from typing import Union, Optional, Dict
 from datetime import datetime, timedelta
@@ -296,7 +297,8 @@ class DailyReport(AbstractReport):
         self.plot_anomaly_map(rain=rain, avg_rain=avg_rain, plt_ax=rep_axs[1])
 
         ### Plot the chart
-        self.plot_charts(
+        # Receive the time series as a parameter
+        tss = self.plot_charts(
             rain_cube=rain,
             avg_rain_cube=avg_rain,
             rain_fcst=rain_fcst,
@@ -305,7 +307,7 @@ class DailyReport(AbstractReport):
             plt_ax2=rep_axs[3],
         )
 
-        return fig, rep_axs, rain, avg_rain, rain_fcst, avg_rain_fcst
+        return fig, rep_axs, rain, avg_rain, rain_fcst, avg_rain_fcst, tss
 
     def plot_daily_chart(
         self,
@@ -421,3 +423,5 @@ class DailyReport(AbstractReport):
             avg_fcst_ts=avg_fcst_ts,
             plt_ax=plt_ax2,
         )
+
+        return pd.concat([rain_ts, avg_rain_ts, fcst_ts, avg_fcst_ts], axis=1)
