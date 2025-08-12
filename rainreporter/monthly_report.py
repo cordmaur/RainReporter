@@ -41,12 +41,18 @@ class MonthlyReport(AbstractReport):
 
         # store the variables
         self.name = name if name != "" else Path(shp_file).stem
-        self.shp = gpd.read_file(shp_file)
         self.month_lbk = month_lbk if month_lbk is not None else 23
         self.wet_month = wet_month
 
+        # Load the shape file, considering if it is parquet or othder
+        shp_file = Path(shp_file)
+        if shp_file.suffix == ".parquet":
+            self.shp = gpd.read_parquet(shp_file)
+        else:
+            self.shp = gpd.read_file(shp_file)
+
     @classmethod
-    def from_dict(  # type: ignore
+    def from_dict(
         cls,
         downloader: Downloader,
         mapper: Mapper,
@@ -278,7 +284,7 @@ class MonthlyReport(AbstractReport):
 
             dframe.iloc[-1, -1] = last_date
 
-        dframe["last_date"] = pd.to_datetime(dframe["last_date"])
+        dframe['last_date'] = pd.to_datetime(dframe['last_date'])
         return dframe
 
     def generate_report(
@@ -383,6 +389,8 @@ class MonthlyReport(AbstractReport):
             date (str): The date of the report
 
         """
+        # Convert date to datetime
+        date = DateProcessor.parse_date(date)
 
         # Load the dataframe for this report
         dframe = self._create_rain_lta_df(date)
@@ -398,13 +406,21 @@ class MonthlyReport(AbstractReport):
         backend = matplotlib.get_backend()
         matplotlib.use("Agg")
 
+        # The anomaly map must be a complete month, so if we are in the currenmonth, we need to 
+        # plot the anomaly map for the previous month.
+        # So, first, we have to check if year and month are the same as of today
+        today = DateProcessor.today()
+        month = DateProcessor.pretty_date(date, "%Y-%m")
+        if (date.year == today.year) and (date.month == today.month):
+            date = date - relativedelta(months=1)
+
         month_str = DateProcessor.pretty_date(date, "%Y-%m")
         fig, ax = plt.subplots()
         self.plot_anomaly_map(date=date, shp=self.shp, plt_ax=ax)
         filename = unidecode(self.name).replace(" ", "_") + "-" + month_str
         fig.savefig(assets_folder / f"{filename}.png")
 
-        dframe.loc[month_str, "anomaly_map"] = f"{filename}.png"
+        dframe.loc[month, "anomaly_map"] = f"{filename}.png"
 
         # return to original backend
         matplotlib.use(backend)

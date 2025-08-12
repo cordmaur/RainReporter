@@ -167,6 +167,10 @@ class Mapper:
         # get the filter query
         rows_in_view = Mapper.filter_shape(rows_in_view, shape)
 
+        # Skip if nothing to plot in the view
+        if rows_in_view.empty:
+            return
+        
         # get the style from the shape
         style = shape["style"] if "style" in shape else {}
 
