@@ -79,6 +79,10 @@ class DailyReport(AbstractReport):
         # Create the cubes with observed, average and forecast rain
         observed_cube, forecast_cube, avg_daily_cube = self._prepare_cubes(date)
 
+        # Make sure the shape match the cubes CRS
+        if self.shp.crs != observed_cube.rio.crs:
+            self.shp = self.shp.to_crs(observed_cube.rio.crs)
+
         # Save the anomaly map for the specific date
         backend = mpl.get_backend()
         mpl.use("Agg")
@@ -107,7 +111,6 @@ class DailyReport(AbstractReport):
             observed_series = observed_series.set_index(["time", "basin"])
             observed_series = observed_series.combine_first(existing_df)
             observed_series = observed_series.reset_index()
-
 
         # One last adjust before saving the data to parquet. We need to adjust the "time" column to be in the format of "YYYY-MM-DD"
         # without the time component, since we are dealing with daily data.
