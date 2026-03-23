@@ -418,7 +418,7 @@ class MonthlyReport(AbstractReport):
         fig, ax = plt.subplots()
         self.plot_anomaly_map(date=date, shp=self.shp, plt_ax=ax)
         filename = unidecode(self.name).replace(" ", "_") + "-" + month_str
-        fig.savefig(assets_folder / f"{filename}.png")
+        fig.savefig((assets_folder / f"{filename}.png").as_posix())
 
         dframe.loc[month, "anomaly_map"] = f"{filename}.png"
 

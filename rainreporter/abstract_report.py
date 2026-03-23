@@ -1,12 +1,14 @@
 """
 Defines the AbstractReport class
 """
+
 from pathlib import Path
 import abc
 from typing import Dict, Optional, Union, Tuple
 from mergedownloader.downloader import Downloader
 
 from .mapper import Mapper
+
 
 
 class AbstractReport(abc.ABC):
@@ -20,6 +22,8 @@ class AbstractReport(abc.ABC):
     def generate_report(self, *args, **kwargs) -> Tuple:
         """Abstract method that needs to be implemented"""
 
+    days_lbk: int = 0
+
     @classmethod
     @abc.abstractmethod
     def from_dict(
@@ -28,7 +32,7 @@ class AbstractReport(abc.ABC):
         mapper: Mapper,
         config: Dict,
         bases_folder: Optional[Union[str, Path]] = None,
-    ):
+    ) -> "AbstractReport":
         """Create the report class based on a dictionary specification"""
 
     @abc.abstractmethod
