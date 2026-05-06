@@ -138,7 +138,7 @@ class DailyReport(AbstractReport):
     ) -> pd.DataFrame:
         """Prepare the dataframe with observed, average and forecast values"""
         # First cut all cubes by the geometry
-        observed_cube = GISUtil.cut_cube_by_geoms(observed_cube, self.shp.geometry)
+        observed_cube = GISUtil.cut_cube_by_geoms(observed_cube, self.shp.geometry).rename("prec")
         avg_daily_cube = GISUtil.cut_cube_by_geoms(avg_daily_cube, self.shp.geometry)
         forecast_cube = GISUtil.cut_cube_by_geoms(forecast_cube, self.shp.geometry)
 
