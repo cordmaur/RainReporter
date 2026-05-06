@@ -108,6 +108,13 @@ class DailyReport(AbstractReport):
             existing_df = pd.read_parquet(file)
             if "time" in existing_df.columns:
                 existing_df = existing_df.set_index(["time", "basin"])
+
+            # One minor adjust before combining the data to parquet.
+            # We need to adjust the "time" column to be in the format of "YYYY-MM-DD"
+            # without the time component, since we are dealing with daily data.
+            # The last file downloaded refers to the rain of the previous day, however it should be displayed as the
+            # file day at 00:00. Therefore, we need to shift the time by 12 hours to match the expected format.
+            observed_series["time"] = observed_series["time"] - pd.Timedelta(hours=12)
             observed_series = observed_series.set_index(["time", "basin"])
             observed_series = observed_series.combine_first(existing_df)
             observed_series = observed_series.reset_index()
@@ -116,7 +123,6 @@ class DailyReport(AbstractReport):
         # without the time component, since we are dealing with daily data.
         # The last file downloaded refers to the rain of the previous day, however it should be displayed as the
         # file day at 00:00. Therefore, we need to shift the time by 12 hours to match the expected format.
-        observed_series["time"] = observed_series["time"] - pd.Timedelta(hours=12)
 
         observed_series.to_parquet(file)
 
