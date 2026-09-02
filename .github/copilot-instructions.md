@@ -98,3 +98,44 @@ These are the standard background layers rendered by `Mapper.plot_context_layers
 - **No test suite** currently. Validate changes through notebooks (e.g., `nbs/68-ReportGenerator_development.ipynb`).
 - **Parquet + PNG exports**: `DailyReport.export_report_data()` produces Parquet time series and PNG map assets alongside PDFs.
 - Config shapefile paths for basin boundaries should be absolute or relative to the working directory at runtime, not the repo root.
+
+## Code Style & Type Safety
+
+All Python files must comply with the following standards.
+
+### Ruff (formatting & linting)
+
+- Line length: **88 characters** (ruff default).
+- Imports: standard library first, then third-party, then local — each group separated by a blank line. Use `from __future__ import annotations` at the top when `X | Y` union syntax or other PEP 604/563 features are used.
+- No unused imports, no bare `except`, no mutable default arguments.
+- Numeric literals use explicit float suffixes where type matters (e.g., `1.0`, `0.0`, `25.4`).
+
+### mypy (strict mode)
+
+- Every function and method must have **full type annotations**, including `-> None` on `__init__`.
+- Use `from __future__ import annotations` so `float | None` union syntax works on all supported Python versions.
+- Use `numpy.typing.NDArray[np.float64]` (from `import numpy.typing as npt`) for NumPy array parameters instead of the bare `np.ndarray`.
+- Cast NumPy scalar results to Python `float` explicitly (e.g., `float(np.log(x))`, `float(np.clip(...))`) so return types stay `float`, not `np.floating[Any]`.
+- Dataclass fields must have explicit types; use `float` not `int` for numeric model parameters.
+- Optional parameters must use `X | None = None` (not just `X = None`).
+
+### Docstrings
+
+- Every module, class, and public method gets a **Google-style docstring**.
+- Module docstring: brief one-liner + paragraph describing purpose and references.
+- Class docstring: describe the concept, not just the fields. Include a usage example for non-trivial classes.
+- Method docstrings follow this structure:
+  ```
+  """Short one-line summary.
+
+  Optional extended explanation.
+
+  Args:
+      param_name: Description (no type — it is already in the signature).
+
+  Returns:
+      Description of what is returned (no type).
+  """
+  ```
+- **Do not repeat the parameter type in the `Args:` section** — it is already in the function signature.
+- Inline comments explain *why*, not *what*. Reserve them for non-obvious algorithmic choices.

@@ -21,7 +21,7 @@ import xarray as xr
 
 from mergedownloader.downloader import Downloader
 from mergedownloader.utils import DateProcessor, GISUtil
-from mergedownloader.inpeparser import INPE_SERVER, InpeParsers, InpeTypes
+from mergedownloader.inpeparser import InpeParsers, InpeTypes
 
 from rainreporter.utils import open_json_file
 from .mapper import Mapper
@@ -92,10 +92,12 @@ class DailyReport(AbstractReport):
         fig.savefig((assets_folder / filename).as_posix())
         plt.close(fig)
 
-        fig_forecast = self.plot_rain_forecast(forecast_cube)
-        filename_forecast = unidecode(self.name).replace(" ", "_") + "_forecast.png"
-        fig_forecast.savefig((assets_folder / filename_forecast).as_posix())
-        plt.close(fig_forecast)
+        # IF forecast is available, plot its figure:
+        if forecast_cube is not None:
+            fig_forecast = self.plot_rain_forecast(forecast_cube)
+            filename_forecast = unidecode(self.name).replace(" ", "_") + "_forecast.png"
+            fig_forecast.savefig((assets_folder / filename_forecast).as_posix())
+            plt.close(fig_forecast)
 
         mpl.use(backend)
 
@@ -134,13 +136,12 @@ class DailyReport(AbstractReport):
         self,
         observed_cube: xr.DataArray,
         avg_daily_cube: xr.DataArray,
-        forecast_cube: xr.DataArray,
+        forecast_cube: xr.DataArray | None,
     ) -> pd.DataFrame:
         """Prepare the dataframe with observed, average and forecast values"""
         # First cut all cubes by the geometry
         observed_cube = GISUtil.cut_cube_by_geoms(observed_cube, self.shp.geometry)
         avg_daily_cube = GISUtil.cut_cube_by_geoms(avg_daily_cube, self.shp.geometry)
-        forecast_cube = GISUtil.cut_cube_by_geoms(forecast_cube, self.shp.geometry)
 
         # Create the observed series
         observed_series = observed_cube.mean(
@@ -157,10 +158,16 @@ class DailyReport(AbstractReport):
         observed_series = pd.concat([observed_series, average_series], axis=1)
 
         # Create the forecast series and concatenate with the observed series
-        forecast_series = forecast_cube.mean(
-            dim=["latitude", "longitude"]
-        ).to_dataframe()
-        observed_series["forecast"] = forecast_series["prec"]
+        if forecast_cube:
+            forecast_cube = GISUtil.cut_cube_by_geoms(forecast_cube, self.shp.geometry)
+
+            forecast_series = forecast_cube.mean(
+                dim=["latitude", "longitude"]
+            ).to_dataframe()
+            observed_series["forecast"] = forecast_series["prec"]
+            
+        else:
+            observed_series["forecast"] = np.nan
 
         # Add the basin name to the series and reorder the columns
         observed_series["basin"] = self.name
@@ -205,22 +212,23 @@ class DailyReport(AbstractReport):
             datatype=InpeTypes.DAILY_WRF,
         )
 
-        if forecast_cube is None:
-            raise ValueError(
-                f"Could not open the forecast file for date {end_date + timedelta(days=1)}"
+        # If the forecast cube is available, the total time dimension will include the forecast days as well.
+        if forecast_cube is not None:
+            end_date = forecast_cube["time"].values[-1]
+            time_dim = np.concatenate(
+                [observed_cube["time"].values, forecast_cube["time"].values]
             )
+        else:
+            time_dim = observed_cube["time"].values
 
         # Last, create the cube with the average daily rain
         avg_daily_cube = self.downloader.create_cube(
             start_date=start_date,
-            end_date=forecast_cube["time"].values[-1],
+            end_date=end_date,
             datatype=InpeTypes.DAILY_AVERAGE,
         )
 
-        # adjust the time dimension of the forecast cube to match the observed cube
-        time_dim = np.concatenate(
-            [observed_cube["time"].values, forecast_cube["time"].values]
-        )
+        # adjust the time dimension of the avg_daily_cube
         avg_daily_cube["time"] = time_dim
 
         return observed_cube, forecast_cube, avg_daily_cube
