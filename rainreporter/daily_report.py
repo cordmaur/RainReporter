@@ -158,7 +158,7 @@ class DailyReport(AbstractReport):
         observed_series = pd.concat([observed_series, average_series], axis=1)
 
         # Create the forecast series and concatenate with the observed series
-        if forecast_cube:
+        if forecast_cube is not None:
             forecast_cube = GISUtil.cut_cube_by_geoms(forecast_cube, self.shp.geometry)
 
             forecast_series = forecast_cube.mean(
